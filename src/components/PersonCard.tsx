@@ -15,7 +15,7 @@ const PersonCard = ({
   const maxAttempts = getMaxAttempts();
 
   return (
-    <div className="bg-white rounded-lg px-6 py-2 border-1 shadow-xl border-gray-700 mx-0.5 dark:bg-sky-800/50 dark:text-gray-50">
+    <div className="bg-white rounded-lg px-6 py-2 border-1 shadow-xl border-gray-700 mx-0.5 dark:bg-sky-900/50 dark:text-gray-50">
       <div className="justify-items-center">
         <h2 className="text-lg font-bold mb-4 dark:text-white">
           ({id}) {name}
@@ -50,7 +50,18 @@ const PersonCard = ({
                 {/* Dynamic attempt generation */}
                 {res.times.map((time, i) => (
                   <td key={i} className="hidden sm:table-cell py-1">
-                    {time}
+                    {time != "DNF" ? (
+                      time
+                    ) : (
+                      <>
+                        <input
+                          type="text"
+                          placeholder="DNF"
+                          maxLength={8}
+                          className="w-15 text-center placeholder-red-600"
+                        />
+                      </>
+                    )}
                   </td>
                 ))}
                 {/* Empty cells for missing attempts (-) */}

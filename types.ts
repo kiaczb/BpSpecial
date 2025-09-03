@@ -7,7 +7,7 @@ export interface PersonCardProps {
 }
 export interface Result {
   categoryId: string;
-  times: number[];
+  times: string[];
   average: string;
   best: string;
   sum: number;
@@ -16,4 +16,5 @@ export interface WCIF {
   name: string;
   persons: any[];
   events: any[];
+  extensions: any[];
 }
