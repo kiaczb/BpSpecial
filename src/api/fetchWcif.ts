@@ -48,9 +48,22 @@ export async function fetchCompetitionData(competitionId: string): Promise<{
           const attempts = personResult.attempts || [];
           const times = Array(attempts.length).fill("DNS");
           let sumOfAttempts = 0;
+
           for (let i = 0; i < attempts.length; i++) {
-            sumOfAttempts += attempts[i].result;
-            times[i] = convertResult(attempts[i].result, ev.id);
+            let resultValue = attempts[i].result;
+
+            // Ha -1 a result, próbáljuk kivenni az extensions-ből
+            if (resultValue === -1 && ev.rounds[0].extensions?.length) {
+              const ext = ev.rounds[0].extensions.find(
+                (e: any) => e.personId === person.id && e.attemptIndex === i
+              );
+              if (ext) {
+                resultValue = ext.result;
+              }
+            }
+
+            sumOfAttempts += resultValue;
+            times[i] = convertResult(resultValue, ev.id);
           }
 
           return {

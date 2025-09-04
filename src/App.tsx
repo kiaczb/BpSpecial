@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import PersonCard from "./components/PersonCard";
 import SearchBar from "./components/SearchBar";
+import LoginBar from "./components/LoginBar";
 import { fetchCompetitionData } from "./api/fetchWcif";
 import type { PersonCardProps } from "../types";
 
@@ -24,7 +25,6 @@ function App() {
 
   if (loading) return <div className="p-4">Loading…</div>;
 
-  // 👇 keresés névben vagy id-ben
   const filteredResults = personResults.filter(
     (p) =>
       p.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -33,14 +33,14 @@ function App() {
 
   return (
     <>
+      <div className="mb-3">
+        <LoginBar competitionName={competitionName} />
+      </div>
       <div className="mb-4">
-        <h1 className="text-3xl text-center font-bold m-2 dark:text-white">
-          {competitionName}
-        </h1>
         <SearchBar query={query} onChange={setQuery} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
+      <div className="grid mx-2 grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
         {filteredResults.map((p) => (
           <PersonCard key={p.id} {...p} />
         ))}
