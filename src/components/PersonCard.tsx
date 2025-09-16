@@ -17,7 +17,7 @@ const PersonCard = ({
   return (
     <div className="bg-white rounded-lg px-6 py-2 border-1 shadow-xl border-gray-700 mx-0.5 dark:bg-sky-900/50 dark:text-gray-50">
       <div className="justify-items-center">
-        <h2 className="text-lg font-bold mb-4 dark:text-white">
+        <h2 className="text-lg font-bold mb-4 text-center dark:text-white">
           ({id}) {name}
         </h2>
       </div>
