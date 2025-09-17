@@ -25,7 +25,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const WCA_ORIGIN = import.meta.env.VITE_WCA_ORIGIN;
-const WCA_API_ORIGIN = import.meta.env.VITE_WCA_API_ORIGIN;
 const CLIENT_ID = import.meta.env.VITE_WCA_CLIENT_KEY;
 const REDIRECT_URI = window.location.origin;
 const localStorageKey = (key: string) => `WCAApp.${key}`;
@@ -39,12 +38,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const u = localStorage.getItem(localStorageKey("user"));
     return u ? JSON.parse(u) : null;
   });
-
-  // Token expiry kezelése
-  const isTokenValid = () => {
-    const expiry = localStorage.getItem(localStorageKey("tokenExpiry"));
-    return !!accessToken && !!expiry && Date.now() < parseInt(expiry, 10);
-  };
 
   // Ha redirectből jött token a hash-ben, mentsük el
   useEffect(() => {

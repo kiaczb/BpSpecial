@@ -1,5 +1,9 @@
+// src/components/PersonCard.tsx
 import type { PersonCardProps } from "../../types";
 import { convertResult } from "../utils";
+import { useAuth } from "../api/AuthContext";
+import { useState } from "react";
+
 const PersonCard = ({
   id,
   name,
@@ -7,12 +11,101 @@ const PersonCard = ({
   remainingTime,
   usedTime,
 }: PersonCardProps) => {
-  // func for colums number
+  const { fetchWithAuth, user } = useAuth();
+  const [isUpdating, setIsUpdating] = useState(false);
+
   const getMaxAttempts = () => {
     return Math.max(...results.map((res) => res.times.length), 5);
   };
 
   const maxAttempts = getMaxAttempts();
+
+  const handleTimeUpdate = async (
+    personId: number,
+    personName: string,
+    eventId: string,
+    roundId: string,
+    attemptIndex: number,
+    newValue: string
+  ) => {
+    if (!user) {
+      alert("Be kell jelentkezned az eredmények módosításához");
+      return;
+    }
+
+    if (!newValue.trim()) {
+      return; // Nem változott vagy üres érték
+    }
+
+    setIsUpdating(true);
+
+    try {
+      // Először lekérjük a jelenlegi WCIF-et
+      const response = await fetchWithAuth(
+        `https://www.worldcubeassociation.org/api/v0/competitions/BudapestSpecial2024/wcif`
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP hiba a WCIF lekérésnél: ${response.status}`);
+      }
+
+      const wcif = await response.json();
+
+      // Készítsük el az extension adatot a megfelelő formátumban
+      const extensionId = `hungarian.time.${personId}.${eventId}.${attemptIndex}`;
+
+      // Megnézzük, van-e már extension, ha igen, azt frissítjük
+      const existingExtensions = wcif.extensions || [];
+      const existingExtensionIndex = existingExtensions.findIndex(
+        (ext: any) => ext.id === extensionId
+      );
+
+      const newExtension = {
+        id: extensionId,
+        specUrl: "https://example.com/hungarian-time-extension",
+        data: {
+          personId,
+          personName,
+          eventId,
+          roundId,
+          attemptIndex,
+          newValue,
+          updatedAt: new Date().toISOString(),
+        },
+      };
+
+      if (existingExtensionIndex >= 0) {
+        // Frissítjük a meglévő extensiont
+        existingExtensions[existingExtensionIndex] = newExtension;
+      } else {
+        // Új extensiont adunk hozzá
+        existingExtensions.push(newExtension);
+      }
+
+      // Küldjük el a PATCH kérést CSAK az extensions mezővel
+      const patchResponse = await fetchWithAuth(
+        `https://www.worldcubeassociation.org/api/v0/competitions/BudapestSpecial2024/wcif`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ extensions: existingExtensions }),
+        }
+      );
+
+      if (!patchResponse.ok) {
+        const errorText = await patchResponse.text();
+        console.error("Patch response error:", errorText);
+        throw new Error(`HTTP hiba a frissítésnél: ${patchResponse.status}`);
+      }
+
+      console.log("Idő frissítve extensionként");
+      alert("Idő sikeresen frissítve!");
+    } catch (error) {
+      console.error("Hiba az idő frissítésekor:", error);
+      alert(`Hiba történt: ${error}`);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-lg px-6 py-2 border-1 shadow-xl border-gray-700 mx-0.5 dark:bg-sky-900/50 dark:text-gray-50">
@@ -26,7 +119,6 @@ const PersonCard = ({
           <thead className="text-center">
             <tr className="border-collapse border-b-1 border-gray-400">
               <th>Category</th>
-              {/* Dynamic column generation */}
               {Array.from({ length: maxAttempts }, (_, i) => (
                 <th key={i} className="hidden sm:table-cell">
                   {i + 1}
@@ -47,24 +139,39 @@ const PersonCard = ({
                     className={`cubing-icon event-${res.categoryId} text-2xl`}
                   ></span>
                 </td>
-                {/* Dynamic attempt generation */}
                 {res.times.map((time, i) => (
                   <td key={i} className="hidden sm:table-cell py-1">
-                    {time != "DNF" ? (
+                    {time !== "DNF" && time !== "DNS" ? (
                       time
                     ) : (
-                      <>
-                        <input
-                          type="text"
-                          placeholder="DNF"
-                          maxLength={8}
-                          className="w-15 text-center placeholder-red-600"
-                        />
-                      </>
+                      <input
+                        type="text"
+                        placeholder={time}
+                        maxLength={8}
+                        className="w-15 text-center placeholder-red-600 border rounded"
+                        disabled={isUpdating}
+                        onBlur={(e) => {
+                          const val = e.target.value.trim();
+                          if (val) {
+                            handleTimeUpdate(
+                              id,
+                              name,
+                              res.categoryId,
+                              `${res.categoryId}-r1`,
+                              i,
+                              time
+                            );
+                          }
+                        }}
+                        onKeyPress={(e) => {
+                          if (e.key === "Enter") {
+                            e.currentTarget.blur();
+                          }
+                        }}
+                      />
                     )}
                   </td>
                 ))}
-                {/* Empty cells for missing attempts (-) */}
                 {Array.from(
                   { length: maxAttempts - res.times.length },
                   (_, i) => (

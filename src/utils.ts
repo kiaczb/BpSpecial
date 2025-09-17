@@ -37,3 +37,37 @@ function formatSeconds_mm_ss(seconds: number): string {
 export const hasValidResults = (times: string[]): boolean => {
   return times.some((time) => time !== "DNS" && time !== "");
 };
+// src/utils.ts
+// ... (egyéb meglévő függvények)
+
+export function parseTimeToCentiseconds(timeString: string): number {
+  if (!timeString) return -1;
+
+  timeString = timeString.trim().toUpperCase();
+  if (timeString === "DNF") return -1;
+  if (timeString === "DNS") return -2;
+
+  // Formátumok: "MM:SS.ss", "SS.ss", "SS"
+  const parts = timeString.split(":");
+
+  if (parts.length === 2) {
+    // MM:SS.ss formátum
+    const minutes = parseInt(parts[0]) || 0;
+    const secondsParts = parts[1].split(".");
+    const seconds = parseInt(secondsParts[0]) || 0;
+    const hundredths = secondsParts[1]
+      ? parseInt(secondsParts[1].padEnd(2, "0"))
+      : 0;
+
+    return minutes * 60 * 100 + seconds * 100 + hundredths;
+  } else {
+    // SS.ss vagy SS formátum
+    const secondsParts = timeString.split(".");
+    const seconds = parseInt(secondsParts[0]) || 0;
+    const hundredths = secondsParts[1]
+      ? parseInt(secondsParts[1].padEnd(2, "0"))
+      : 0;
+
+    return seconds * 100 + hundredths;
+  }
+}
