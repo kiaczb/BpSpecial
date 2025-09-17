@@ -1,7 +1,9 @@
+// src/App.tsx
 import { useEffect, useState } from "react";
 import PersonCard from "./components/PersonCard";
 import SearchBar from "./components/SearchBar";
 import LoginBar from "./components/LoginBar";
+import ExtensionManager from "./components/ExtensionManager"; // Importáld az új komponenst
 import { fetchCompetitionData } from "./api/fetchWcif";
 import type { PersonCardProps } from "../types";
 
@@ -36,6 +38,12 @@ function App() {
       <div className="mb-3">
         <LoginBar competitionName={competitionName} />
       </div>
+
+      {/* ExtensionManager hozzáadása */}
+      <div className="mb-4">
+        <ExtensionManager />
+      </div>
+
       <div className="mb-4">
         <SearchBar query={query} onChange={setQuery} />
       </div>

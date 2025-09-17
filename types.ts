@@ -18,3 +18,9 @@ export interface WCIF {
   events: any[];
   extensions: any[];
 }
+// src/types.ts
+export interface FetchWithAuth {
+  (url: string, options?: RequestInit): Promise<Response>;
+}
+
+// ... egyéb típusok

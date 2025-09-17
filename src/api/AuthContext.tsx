@@ -1,5 +1,11 @@
 // src/AuthContext.tsx
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 
 interface User {
   id: number;
@@ -22,57 +28,47 @@ const WCA_ORIGIN = import.meta.env.VITE_WCA_ORIGIN;
 const WCA_API_ORIGIN = import.meta.env.VITE_WCA_API_ORIGIN;
 const CLIENT_ID = import.meta.env.VITE_WCA_CLIENT_KEY;
 const REDIRECT_URI = window.location.origin;
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [accessToken, setAccessToken] = useState<string | null>(() => localStorage.getItem("accessToken"));
+const localStorageKey = (key: string) => `WCAApp.${key}`;
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [accessToken, setAccessToken] = useState<string | null>(() =>
+    localStorage.getItem(localStorageKey("accessToken"))
+  );
   const [user, setUser] = useState<User | null>(() => {
-    const u = localStorage.getItem("user");
+    const u = localStorage.getItem(localStorageKey("user"));
     return u ? JSON.parse(u) : null;
   });
+
+  // Token expiry kezelése
+  const isTokenValid = () => {
+    const expiry = localStorage.getItem(localStorageKey("tokenExpiry"));
+    return !!accessToken && !!expiry && Date.now() < parseInt(expiry, 10);
+  };
 
   // Ha redirectből jött token a hash-ben, mentsük el
   useEffect(() => {
     const hash = window.location.hash.replace(/^#/, "");
     if (!hash) return;
+
     const params = new URLSearchParams(hash);
     const tokenFromUrl = params.get("access_token");
-    if (tokenFromUrl) {
+    const expiresIn = params.get("expires_in");
+
+    if (tokenFromUrl && expiresIn) {
+      const expiryTime = Date.now() + parseInt(expiresIn, 10) * 1000;
+
       setAccessToken(tokenFromUrl);
-      localStorage.setItem("accessToken", tokenFromUrl);
-      // töröljük a hash-t
+      localStorage.setItem(localStorageKey("accessToken"), tokenFromUrl);
+      localStorage.setItem(
+        localStorageKey("tokenExpiry"),
+        expiryTime.toString()
+      );
+
+      // Töröljük a hash-t
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
-
-  // Amikor token van, töltsük be a /me endpointot (toleráljuk a data.me / data különbséget)
-  useEffect(() => {
-    if (!accessToken) return;
-
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`${WCA_API_ORIGIN}/me`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (!res.ok) {
-          console.warn("Failed to fetch /me:", res.status);
-          return;
-        }
-        const data = await res.json();
-        const u = data && data.me ? data.me : data;
-        if (!cancelled) {
-          setUser(u);
-          localStorage.setItem("user", JSON.stringify(u));
-        }
-      } catch (err) {
-        console.error("Error loading /me:", err);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [accessToken]);
 
   const signIn = useCallback(() => {
     const params = new URLSearchParams({
@@ -94,20 +90,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Robust headers merging: használjunk Headers objektumot
   const fetchWithAuth = useCallback(
     async (url: string, options: RequestInit = {}) => {
-      const token = accessToken ?? localStorage.getItem("accessToken");
+      const token =
+        accessToken ?? localStorage.getItem(localStorageKey("accessToken"));
       if (!token) throw new Error("Not authenticated");
+
+      // Ellenőrizzük, hogy érvényes-e a token
+      const expiry = localStorage.getItem(localStorageKey("tokenExpiry"));
+      if (!expiry || Date.now() >= parseInt(expiry, 10)) {
+        signOut();
+        throw new Error("Token expired");
+      }
 
       const headers = new Headers(options.headers ?? {});
       headers.set("Authorization", `Bearer ${token}`);
 
+      // Ha van body, állítsuk be a Content-Type-ot
+      if (options.body && !headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+      }
+
       const res = await fetch(url, { ...options, headers });
+
+      // Ha unauthorized, kijelentkeztetjük a felhasználót
+      if (res.status === 401) {
+        signOut();
+        throw new Error("Authentication failed");
+      }
+
       return res;
     },
-    [accessToken]
+    [accessToken, signOut]
   );
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, signIn, signOut, fetchWithAuth }}>
+    <AuthContext.Provider
+      value={{ user, accessToken, signIn, signOut, fetchWithAuth }}
+    >
       {children}
     </AuthContext.Provider>
   );
