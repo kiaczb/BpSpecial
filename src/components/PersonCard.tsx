@@ -1,6 +1,6 @@
 // src/components/PersonCard.tsx
 import type { PersonCardProps } from "../../types";
-import { convertResult, parseTimeToCentiseconds } from "../utils";
+import { convertResult } from "../utils";
 import { useAuth } from "../context/AuthContext";
 import { useState, useRef, useEffect } from "react";
 
@@ -11,7 +11,7 @@ const PersonCard = ({
   remainingTime,
   usedTime,
 }: PersonCardProps) => {
-  const { fetchWithAuth, user, userRoles, loadCompetitionRoles } = useAuth();
+  const { fetchWithAuth, user, userRoles } = useAuth(); // ELTÁVOLÍTVA: loadCompetitionRoles
   const [isUpdating, setIsUpdating] = useState(false);
   const [modifiedValues, setModifiedValues] = useState<{
     [key: string]: string;
@@ -21,12 +21,7 @@ const PersonCard = ({
 
   const competitionId = "BudapestSpecial2024";
 
-  // Betöltjük a felhasználó szerepeit
-  useEffect(() => {
-    if (user) {
-      loadCompetitionRoles(competitionId);
-    }
-  }, [user, loadCompetitionRoles]);
+  // ELTÁVOLÍTVA: a loadCompetitionRoles useEffect
 
   // Ellenőrizzük, hogy a felhasználónak van-e szerkesztési jogosultsága
   useEffect(() => {
@@ -69,90 +64,75 @@ const PersonCard = ({
 
   // CSAK AZ ADOTT PERSONCARD MENTÉSE - EGY API HÍVÁS
   const saveAllChanges = async () => {
-    if (!user) {
-      alert("Be kell jelentkezned az eredmények módosításához");
-      return;
-    }
-
-    if (!hasEditPermission) {
-      alert("Nincs jogosultságod az eredmények módosításához");
-      return;
-    }
-
-    if (Object.keys(modifiedValues).length === 0) {
-      alert("Nincsenek módosított értékek a mentéshez");
+    if (
+      !user ||
+      !hasEditPermission ||
+      Object.keys(modifiedValues).length === 0
+    ) {
       return;
     }
 
     setIsUpdating(true);
 
     try {
-      // CSAK AZ ADOTT PERSONCARD EXTENSION-JEI
-      const extensionsToUpdate = [];
+      // Személyenkénti csoportosítás - egy extension egy személyre
+      const personExtension = {
+        id: `hungarian.times.person.${id}`,
+        specUrl: "https://example.com/hungarian-person-times-extension",
+        data: {
+          personId: id,
+          personName: name,
+          competitionId: competitionId,
+          modifiedAttempts: [] as any[],
+          lastUpdated: new Date().toISOString(),
+        },
+      };
 
-      // Minden módosított értékhez létrehozunk egy extension-t
+      // Összegyűjtjük az összes módosítást
       for (const [key, newValue] of Object.entries(modifiedValues)) {
-        // Kulcs feldolgozása - egyszerű regex-el
         const match = key.match(/pid-(\d+)-evt-(\w+)-att-(\d+)/);
+        if (!match) continue;
 
-        if (!match) {
-          console.error("Érvénytelen kulcs formátum:", key);
-          continue;
-        }
-
-        const personId = match[1];
         const eventId = match[2];
         const attemptIndex = parseInt(match[3]);
         const roundId = `${eventId}-r1`;
 
-        const extensionId = `hungarian.time.${personId}.${eventId}.${attemptIndex}`;
-
-        const newExtension = {
-          id: extensionId,
-          specUrl: "https://example.com/hungarian-time-extension",
-          data: {
-            personId: parseInt(personId),
-            personName: name,
-            eventId,
-            roundId,
-            attemptIndex: attemptIndex,
-            newValue,
-          },
-        };
-
-        extensionsToUpdate.push(newExtension);
+        personExtension.data.modifiedAttempts.push({
+          eventId,
+          roundId,
+          attemptIndex,
+          oldValue:
+            results.find((r) => r.categoryId === eventId)?.times[
+              attemptIndex
+            ] || "DNF/DNS",
+          newValue,
+          modifiedAt: new Date().toISOString(),
+        });
       }
 
-      // CSAK EGY API HÍVÁS - csak a módosított extensionökkel
+      // Elküldjük csak ezt az egy extension-t
       const patchResponse = await fetchWithAuth(
         `https://www.worldcubeassociation.org/api/v0/competitions/${competitionId}/wcif`,
         {
           method: "PATCH",
-          body: JSON.stringify({ extensions: extensionsToUpdate }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ extensions: [personExtension] }),
         }
       );
 
       if (!patchResponse.ok) {
         const errorText = await patchResponse.text();
-        throw new Error(
-          `HTTP hiba a frissítésnél: ${patchResponse.status} - ${errorText}`
-        );
+        throw new Error(`HTTP hiba: ${patchResponse.status} - ${errorText}`);
       }
 
-      console.log("PersonCard módosításai elmentve");
+      console.log("Személy adatai elmentve egy extension-ben");
       alert("Módosítások sikeresen elmentve!");
-
-      // Reseteljük a módosított értékeket
       setModifiedValues({});
     } catch (error) {
       console.error("Hiba a mentés során:", error);
-      if (String(error).includes("429")) {
-        alert(
-          "Túl gyakran küldesz kéréseket. Várj egy kicsit és próbáld újra."
-        );
-      } else {
-        alert(`Hiba történt: ${error}`);
-      }
+      alert(`Hiba történt: ${error}`);
     } finally {
       setIsUpdating(false);
     }
