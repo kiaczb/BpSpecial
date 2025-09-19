@@ -1,4 +1,3 @@
-// components/PersonCard.tsx
 import type { PersonCardProps, Extension } from "../types";
 import {
   formatTimeInput,
@@ -47,11 +46,40 @@ const PersonCard = ({
   const { getWcif, updateWcifExtensions } = useWcifService();
   const maxAttempts = getMaxAttempts(results);
 
-  // Dinamikus időszámítás
+  // Extension-ből származó idők kinyerése és centisecond konverziója
+  const extensionTimes = useMemo(() => {
+    const times: { [key: string]: number } = {};
+
+    // Megkeressük a személy extension-ét
+    const personExtension = extensions.find(
+      (ext) => ext.id === `hungarian.times.person.${id}`
+    );
+
+    if (!personExtension) return times;
+
+    // Minden módosított attempt-ot feldolgozunk
+    personExtension.data.modifiedAttempts.forEach((attempt: any) => {
+      const key = generateInputKey(id, attempt.eventId, attempt.attemptIndex);
+      times[key] = parseInt(attempt.newValue, 10);
+    });
+
+    return times;
+  }, [extensions, id]);
+
+  // Dinamikus időszámítás - most már az extension időket is figyelembe veszi
   const { remainingTime, usedTime } = useMemo(() => {
     let totalUsedTime = initialUsedTime;
     let totalRemainingTime = initialRemainingTime;
 
+    // 1. Extension-ből származó idők hozzáadása
+    Object.values(extensionTimes).forEach((centiseconds) => {
+      if (centiseconds > 0) {
+        totalRemainingTime -= centiseconds;
+        totalUsedTime += centiseconds;
+      }
+    });
+
+    // 2. Módosított értékek hozzáadása (ha vannak)
     Object.values(modifiedValues).forEach((formattedTime) => {
       const centiseconds = formattedTimeToCentiseconds(formattedTime);
       if (centiseconds > 0) {
@@ -64,7 +92,7 @@ const PersonCard = ({
       remainingTime: Math.max(-1, totalRemainingTime),
       usedTime: totalUsedTime,
     };
-  }, [initialRemainingTime, initialUsedTime, modifiedValues]);
+  }, [initialRemainingTime, initialUsedTime, extensionTimes, modifiedValues]);
 
   // DNF-ek helyettesítése extensions-ből
   const getDisplayTime = (
@@ -76,22 +104,19 @@ const PersonCard = ({
       return originalTime;
     }
 
-    // Megkeressük a személy extension-ét
-    const personExtension = extensions.find(
-      (ext) => ext.id === `hungarian.times.person.${id}`
-    );
+    // Először nézzük a módosított értékeket
+    const modifiedKey = generateInputKey(id, eventId, attemptIndex);
+    if (modifiedValues[modifiedKey] !== undefined) {
+      return modifiedValues[modifiedKey];
+    }
 
-    if (!personExtension) return originalTime;
+    // Majd az extension-ből
+    if (extensionTimes[modifiedKey] !== undefined) {
+      const centiseconds = extensionTimes[modifiedKey];
+      return convertResult(centiseconds, eventId);
+    }
 
-    const modifiedAttempt = personExtension.data.modifiedAttempts.find(
-      (attempt: any) =>
-        attempt.eventId === eventId && attempt.attemptIndex === attemptIndex
-    );
-
-    if (!modifiedAttempt) return originalTime;
-
-    // newValue → centisek → visszaalakítás stringgé
-    return convertResult(parseInt(modifiedAttempt.newValue, 10), eventId);
+    return originalTime;
   };
 
   const saveAllChanges = async (): Promise<void> => {
