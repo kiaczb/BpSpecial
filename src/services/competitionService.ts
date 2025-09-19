@@ -92,16 +92,6 @@ export class CompetitionService {
             for (let i = 0; i < attempts.length; i++) {
               let resultValue = attempts[i].result;
 
-              // Ha -1 a result, próbáljuk kivenni az extensions-ből
-              if (resultValue === -1 && ev.rounds[0]?.extensions?.length) {
-                const ext = ev.rounds[0].extensions.find(
-                  (e: any) => e.personId === person.id && e.attemptIndex === i
-                );
-                if (ext) {
-                  resultValue = ext.result;
-                }
-              }
-
               sumOfAttempts += resultValue > 0 ? resultValue : 0;
               times[i] = this.convertResult(resultValue, ev.id);
             }

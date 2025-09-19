@@ -92,7 +92,10 @@ const PersonCard = ({
         attempt.eventId === eventId && attempt.attemptIndex === attemptIndex
     );
 
-    return modifiedAttempt?.formattedValue || originalTime;
+    if (!modifiedAttempt) return originalTime;
+
+    // newValue → centisek → visszaalakítás stringgé
+    return convertResult(parseInt(modifiedAttempt.newValue, 10), eventId);
   };
 
   const saveAllChanges = async (): Promise<void> => {
@@ -189,16 +192,23 @@ const PersonCard = ({
 
                   return (
                     <td key={i} className="hidden sm:table-cell py-1">
-                      {displayTime !== "DNF" && displayTime !== "DNS" ? (
+                      {time !== "DNF" && time !== "DNS" ? (
+                        // Ha az eredeti nem DNF/DNS → csak szöveg
                         displayTime
                       ) : (
+                        // Ha eredeti DNF/DNS → input mező (extensionből jövő értékkel feltöltve)
                         <input
                           ref={(el) => setInputRef(inputKey, el)}
                           type="text"
-                          placeholder={displayTime}
-                          value={modifiedValues[inputKey] || ""}
+                          value={
+                            modifiedValues[inputKey] ??
+                            (displayTime !== "DNF" && displayTime !== "DNS"
+                              ? displayTime
+                              : "")
+                          }
+                          placeholder={time} // ← mindig az eredeti érték (pl. "DNF")
                           maxLength={8}
-                          className={`w-15 text-center placeholder-red-600 border rounded ${
+                          className={`w-15 text-center placeholder-red-600 text-red-600 border-black border rounded ${
                             isModified ? "bg-yellow-100" : ""
                           } ${hasEditPermission ? "" : "cursor-not-allowed"}`}
                           onChange={(e) => {
