@@ -1,8 +1,21 @@
-// src/components/PersonCard.tsx
-import type { PersonCardProps } from "../../types";
-import { convertResult } from "../utils";
+import type { PersonCardProps } from "../types";
+import { convertResult } from "../utils/utils";
 import { useAuth } from "../context/AuthContext";
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
+
+// Hooks
+import { useEditPermission } from "../hooks/useEditPermissions";
+import { useInputManagement } from "../hooks/useInputManagement";
+
+// Services
+import { useWcifService } from "../services/wcifService";
+
+// Utils
+import {
+  getMaxAttempts,
+  generateInputKey,
+  createPersonExtension,
+} from "../utils/personCardUtils";
 
 const PersonCard = ({
   id,
@@ -11,59 +24,23 @@ const PersonCard = ({
   remainingTime,
   usedTime,
 }: PersonCardProps) => {
-  const { fetchWithAuth, user, userRoles } = useAuth(); // ELTÁVOLÍTVA: loadCompetitionRoles
+  const { user } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
-  const [modifiedValues, setModifiedValues] = useState<{
-    [key: string]: string;
-  }>({});
-  const inputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
-  const [hasEditPermission, setHasEditPermission] = useState(false);
 
   const competitionId = "BudapestSpecial2024";
+  const hasEditPermission = useEditPermission(competitionId);
+  const {
+    modifiedValues,
+    handleInputChange,
+    handleKeyPress,
+    setInputRef,
+    clearModifiedValues,
+  } = useInputManagement();
 
-  // ELTÁVOLÍTVA: a loadCompetitionRoles useEffect
+  const { getWcif, updateWcifExtensions } = useWcifService();
+  const maxAttempts = getMaxAttempts(results);
 
-  // Ellenőrizzük, hogy a felhasználónak van-e szerkesztési jogosultsága
-  useEffect(() => {
-    const competitionRole = userRoles.find(
-      (role) => role.competitionId === competitionId
-    );
-    const canEdit = competitionRole?.isDelegate || competitionRole?.isOrganizer;
-    setHasEditPermission(!!canEdit);
-  }, [userRoles, competitionId]);
-
-  const getMaxAttempts = () => {
-    return Math.max(...results.map((res) => res.times.length), 5);
-  };
-
-  const maxAttempts = getMaxAttempts();
-
-  // Fókuszálás a következő inputra
-  const focusNextInput = (currentKey: string) => {
-    const keys = Object.keys(inputRefs.current);
-    const currentIndex = keys.indexOf(currentKey);
-
-    if (currentIndex < keys.length - 1) {
-      const nextKey = keys[currentIndex + 1];
-      inputRefs.current[nextKey]?.focus();
-    }
-  };
-
-  // Input érték változás kezelése
-  const handleInputChange = (key: string, value: string) => {
-    setModifiedValues((prev) => ({ ...prev, [key]: value }));
-  };
-
-  // Enter kezelése - következő inputra ugrik
-  const handleKeyPress = (e: React.KeyboardEvent, key: string) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      focusNextInput(key);
-    }
-  };
-
-  // CSAK AZ ADOTT PERSONCARD MENTÉSE - EGY API HÍVÁS
-  const saveAllChanges = async () => {
+  const saveAllChanges = async (): Promise<void> => {
     if (
       !user ||
       !hasEditPermission ||
@@ -75,77 +52,36 @@ const PersonCard = ({
     setIsUpdating(true);
 
     try {
-      // Személyenkénti csoportosítás - egy extension egy személyre
-      const personExtension = {
-        id: `hungarian.times.person.${id}`,
-        specUrl: "https://example.com/hungarian-person-times-extension",
-        data: {
-          personId: id,
-          personName: name,
-          competitionId: competitionId,
-          modifiedAttempts: [] as any[],
-          lastUpdated: new Date().toISOString(),
-        },
-      };
+      // 1. WCIF lekérése
+      const wcif = await getWcif(competitionId);
+      const existingExtensions = wcif.extensions || [];
 
-      // Összegyűjtjük az összes módosítást
-      for (const [key, newValue] of Object.entries(modifiedValues)) {
-        const match = key.match(/pid-(\d+)-evt-(\w+)-att-(\d+)/);
-        if (!match) continue;
-
-        const eventId = match[2];
-        const attemptIndex = parseInt(match[3]);
-        const roundId = `${eventId}-r1`;
-
-        personExtension.data.modifiedAttempts.push({
-          eventId,
-          roundId,
-          attemptIndex,
-          oldValue:
-            results.find((r) => r.categoryId === eventId)?.times[
-              attemptIndex
-            ] || "DNF/DNS",
-          newValue,
-          modifiedAt: new Date().toISOString(),
-        });
-      }
-
-      // Elküldjük csak ezt az egy extension-t
-      const patchResponse = await fetchWithAuth(
-        `https://www.worldcubeassociation.org/api/v0/competitions/${competitionId}/wcif`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ extensions: [personExtension] }),
-        }
+      // 2. Régi extension eltávolítása
+      const filteredExtensions = existingExtensions.filter(
+        (ext: any) => !ext.id.startsWith(`hungarian.times.person.${id}`)
       );
 
-      if (!patchResponse.ok) {
-        const errorText = await patchResponse.text();
-        throw new Error(`HTTP hiba: ${patchResponse.status} - ${errorText}`);
-      }
+      // 3. Új extension létrehozása
+      const personExtension = createPersonExtension(
+        id,
+        name,
+        competitionId,
+        modifiedValues
+      );
 
-      console.log("Személy adatai elmentve egy extension-ben");
+      // 4. Extension hozzáadása és mentés
+      const updatedExtensions = [...filteredExtensions, personExtension];
+      await updateWcifExtensions(competitionId, updatedExtensions);
+
+      console.log("Személy adatai elmentve");
       alert("Módosítások sikeresen elmentve!");
-      setModifiedValues({});
+      clearModifiedValues();
     } catch (error) {
       console.error("Hiba a mentés során:", error);
       alert(`Hiba történt: ${error}`);
     } finally {
       setIsUpdating(false);
     }
-  };
-
-  // Input referencia beállítása
-  const setInputRef = (key: string, el: HTMLInputElement | null) => {
-    inputRefs.current[key] = el;
-  };
-
-  // Egyszerű és egyértelmű kulcs generálás
-  const generateInputKey = (eventId: string, attemptIndex: number) => {
-    return `pid-${id}-evt-${eventId}-att-${attemptIndex}`;
   };
 
   return (
@@ -155,7 +91,6 @@ const PersonCard = ({
           ({id}) {name}
         </h2>
 
-        {/* Csak akkor jelenik meg a mentés gomb, ha van szerkesztési jogosultság */}
         {hasEditPermission && (
           <button
             onClick={saveAllChanges}
@@ -193,7 +128,7 @@ const PersonCard = ({
                   ></span>
                 </td>
                 {res.times.map((time, i) => {
-                  const inputKey = generateInputKey(res.categoryId, i);
+                  const inputKey = generateInputKey(id, res.categoryId, i);
                   const isModified = modifiedValues[inputKey] !== undefined;
 
                   return (

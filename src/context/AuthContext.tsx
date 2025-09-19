@@ -6,7 +6,7 @@ import React, {
   useState,
   useCallback,
 } from "react";
-import type { AuthContextType, User, CompetitionRole } from "../../types";
+import type { AuthContextType, User, CompetitionRole } from "../types";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 

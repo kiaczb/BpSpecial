@@ -1,11 +1,10 @@
-// src/App.tsx
 import { useEffect, useState } from "react";
 import PersonCard from "./components/PersonCard";
 import SearchBar from "./components/SearchBar";
 import LoginBar from "./components/LoginBar";
 import ExtensionManager from "./components/ExtensionManager";
-import { fetchCompetitionData } from "./api/fetchWcif";
-import type { PersonCardProps } from "../types";
+import { CompetitionService } from "./services/competitionService";
+import type { PersonCardProps } from "./types";
 import { useAuth } from "./context/AuthContext";
 
 function App() {
@@ -15,9 +14,8 @@ function App() {
   const [query, setQuery] = useState("");
   const { user, loadCompetitionRoles, userRoles } = useAuth();
 
-  // Betöltjük a verseny adatait
   useEffect(() => {
-    fetchCompetitionData("BudapestSpecial2024")
+    CompetitionService.fetchCompetitionData("BudapestSpecial2024")
       .then(({ competitionName, personsWithResults }) => {
         setCompetitionName(competitionName);
         setPersonResults(personsWithResults);
@@ -28,10 +26,8 @@ function App() {
       .finally(() => setLoading(false));
   }, []);
 
-  // CSAK EGYSZER hívjuk meg a loadCompetitionRoles-t itt
   useEffect(() => {
     if (user) {
-      // Csak akkor hívjuk meg, ha még nincsenek betöltve a szerepek
       const hasRoles = userRoles.some(
         (role) => role.competitionId === "BudapestSpecial2024"
       );
@@ -40,7 +36,7 @@ function App() {
         loadCompetitionRoles("BudapestSpecial2024");
       }
     }
-  }, [user, loadCompetitionRoles, userRoles]); // Figyeljük a userRoles változását is
+  }, [user, loadCompetitionRoles, userRoles]);
 
   if (loading) return <div className="p-4">Loading…</div>;
 
