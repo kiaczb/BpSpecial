@@ -1,7 +1,12 @@
-import type { PersonCardProps } from "../types";
-import { formatTimeInput, convertResult } from "../utils/personCardUtils";
+// components/PersonCard.tsx
+import type { PersonCardProps, Extension } from "../types";
+import {
+  formatTimeInput,
+  convertResult,
+  formattedTimeToCentiseconds,
+} from "../utils/personCardUtils";
 import { useAuth } from "../context/AuthContext";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 // Hooks
 import { useEditPermission } from "../hooks/useEditPermissions";
@@ -17,13 +22,19 @@ import {
   createPersonExtension,
 } from "../utils/personCardUtils";
 
+// Extend the PersonCardProps interface locally
+interface ExtendedPersonCardProps extends PersonCardProps {
+  extensions?: Extension[];
+}
+
 const PersonCard = ({
   id,
   name,
   results,
-  remainingTime,
-  usedTime,
-}: PersonCardProps) => {
+  remainingTime: initialRemainingTime,
+  usedTime: initialUsedTime,
+  extensions = [],
+}: ExtendedPersonCardProps) => {
   const { user } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -39,6 +50,50 @@ const PersonCard = ({
 
   const { getWcif, updateWcifExtensions } = useWcifService();
   const maxAttempts = getMaxAttempts(results);
+
+  // Dinamikus időszámítás
+  const { remainingTime, usedTime } = useMemo(() => {
+    let totalUsedTime = initialUsedTime;
+    let totalRemainingTime = initialRemainingTime;
+
+    Object.values(modifiedValues).forEach((formattedTime) => {
+      const centiseconds = formattedTimeToCentiseconds(formattedTime);
+      if (centiseconds > 0) {
+        totalRemainingTime -= centiseconds;
+        totalUsedTime += centiseconds;
+      }
+    });
+
+    return {
+      remainingTime: Math.max(-1, totalRemainingTime),
+      usedTime: totalUsedTime,
+    };
+  }, [initialRemainingTime, initialUsedTime, modifiedValues]);
+
+  // DNF-ek helyettesítése extensions-ből
+  const getDisplayTime = (
+    eventId: string,
+    attemptIndex: number,
+    originalTime: string
+  ): string => {
+    if (originalTime !== "DNF" && originalTime !== "DNS") {
+      return originalTime;
+    }
+
+    // Megkeressük a személy extension-ét
+    const personExtension = extensions.find(
+      (ext) => ext.id === `hungarian.times.person.${id}`
+    );
+
+    if (!personExtension) return originalTime;
+
+    const modifiedAttempt = personExtension.data.modifiedAttempts.find(
+      (attempt: any) =>
+        attempt.eventId === eventId && attempt.attemptIndex === attemptIndex
+    );
+
+    return modifiedAttempt?.formattedValue || originalTime;
+  };
 
   const saveAllChanges = async (): Promise<void> => {
     if (
@@ -130,16 +185,17 @@ const PersonCard = ({
                 {res.times.map((time, i) => {
                   const inputKey = generateInputKey(id, res.categoryId, i);
                   const isModified = modifiedValues[inputKey] !== undefined;
+                  const displayTime = getDisplayTime(res.categoryId, i, time);
 
                   return (
                     <td key={i} className="hidden sm:table-cell py-1">
-                      {time !== "DNF" ? (
-                        time
+                      {displayTime !== "DNF" && displayTime !== "DNS" ? (
+                        displayTime
                       ) : (
                         <input
                           ref={(el) => setInputRef(inputKey, el)}
                           type="text"
-                          placeholder={time}
+                          placeholder={displayTime}
                           value={modifiedValues[inputKey] || ""}
                           maxLength={8}
                           className={`w-15 text-center placeholder-red-600 border rounded ${
@@ -149,7 +205,7 @@ const PersonCard = ({
                             const formatted = formatTimeInput(e.target.value);
                             handleInputChange(inputKey, formatted);
                           }}
-                          onKeyPress={(e) => handleKeyPress(e, inputKey)} // ← EZT ADTUK HOZZÁ
+                          onKeyPress={(e) => handleKeyPress(e, inputKey)}
                           disabled={!hasEditPermission}
                         />
                       )}
