@@ -1,6 +1,6 @@
 // src/components/ExtensionManager.tsx
 import { useState } from "react";
-import { useAuth } from "../api/AuthContext";
+import { useAuth } from "../context/AuthContext";
 
 const ExtensionManager = () => {
   const { fetchWithAuth, user } = useAuth();

@@ -24,3 +24,25 @@ export interface FetchWithAuth {
 }
 
 // ... egyéb típusok
+export interface User {
+  id: number;
+  name: string;
+  wca_id?: string;
+  country_iso2?: string;
+}
+
+export interface CompetitionRole {
+  competitionId: string;
+  isDelegate: boolean;
+  isOrganizer: boolean;
+}
+
+export interface AuthContextType {
+  user: User | null;
+  accessToken: string | null;
+  signIn: () => void;
+  signOut: () => void;
+  fetchWithAuth: (url: string, options?: RequestInit) => Promise<Response>;
+  userRoles: CompetitionRole[];
+  loadCompetitionRoles: (competitionId: string) => Promise<void>;
+}

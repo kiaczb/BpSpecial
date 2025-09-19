@@ -1,4 +1,4 @@
-// src/AuthContext.tsx
+// src/context/AuthContext.tsx
 import React, {
   createContext,
   useContext,
@@ -6,28 +6,16 @@ import React, {
   useState,
   useCallback,
 } from "react";
-
-interface User {
-  id: number;
-  name: string;
-  wca_id?: string;
-  country_iso2?: string;
-}
-
-interface AuthContextType {
-  user: User | null;
-  accessToken: string | null;
-  signIn: () => void;
-  signOut: () => void;
-  fetchWithAuth: (url: string, options?: RequestInit) => Promise<Response>;
-}
+import type { AuthContextType, User, CompetitionRole } from "../../types";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const WCA_ORIGIN = import.meta.env.VITE_WCA_ORIGIN;
+const WCA_API_ORIGIN = import.meta.env.VITE_WCA_API_ORIGIN;
 const CLIENT_ID = import.meta.env.VITE_WCA_CLIENT_KEY;
 const REDIRECT_URI = window.location.origin;
 const localStorageKey = (key: string) => `WCAApp.${key}`;
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -38,6 +26,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const u = localStorage.getItem(localStorageKey("user"));
     return u ? JSON.parse(u) : null;
   });
+  const [userRoles, setUserRoles] = useState<CompetitionRole[]>([]);
+
+  // Token expiry kezelése
+  const isTokenValid = () => {
+    const expiry = localStorage.getItem(localStorageKey("tokenExpiry"));
+    return !!accessToken && !!expiry && Date.now() < parseInt(expiry, 10);
+  };
 
   // Ha redirectből jött token a hash-ben, mentsük el
   useEffect(() => {
@@ -63,6 +58,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
+  // Amikor token van, töltsük be a /me endpointot
+  useEffect(() => {
+    if (!accessToken || !isTokenValid()) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${WCA_API_ORIGIN}/me`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (!res.ok) {
+          console.warn("Failed to fetch /me:", res.status);
+          // Ha invalid a token, töröljük
+          if (res.status === 401) {
+            signOut();
+          }
+          return;
+        }
+        const data = await res.json();
+        const u = data && data.me ? data.me : data;
+        if (!cancelled) {
+          setUser(u);
+          localStorage.setItem(localStorageKey("user"), JSON.stringify(u));
+        }
+      } catch (err) {
+        console.error("Error loading /me:", err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken]);
+
   const signIn = useCallback(() => {
     const params = new URLSearchParams({
       client_id: CLIENT_ID,
@@ -76,11 +105,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const signOut = useCallback(() => {
     setAccessToken(null);
     setUser(null);
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("user");
+    setUserRoles([]);
+    localStorage.removeItem(localStorageKey("accessToken"));
+    localStorage.removeItem(localStorageKey("user"));
+    localStorage.removeItem(localStorageKey("tokenExpiry"));
   }, []);
 
-  // Robust headers merging: használjunk Headers objektumot
   const fetchWithAuth = useCallback(
     async (url: string, options: RequestInit = {}) => {
       const token =
@@ -115,9 +145,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     [accessToken, signOut]
   );
 
+  // Funkció a felhasználó szerepeinek betöltéséhez egy versenyben
+  const loadCompetitionRoles = useCallback(
+    async (competitionId: string) => {
+      if (!accessToken || !user) return;
+
+      try {
+        const response = await fetchWithAuth(
+          `https://www.worldcubeassociation.org/api/v0/competitions/${competitionId}/wcif`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch WCIF: ${response.status}`);
+        }
+
+        const wcif = await response.json();
+
+        // Megkeressük a felhasználót a persons tömbben
+        const currentUser = wcif.persons.find(
+          (person: any) =>
+            person.wcaUserId === user.id || person.name === user.name
+        );
+
+        if (currentUser) {
+          const isDelegate = currentUser.roles?.includes("delegate") || false;
+          const isOrganizer = currentUser.roles?.includes("organizer") || false;
+
+          setUserRoles([
+            {
+              competitionId,
+              isDelegate,
+              isOrganizer,
+            },
+          ]);
+        }
+      } catch (error) {
+        console.error("Error loading user roles:", error);
+      }
+    },
+    [accessToken, user, fetchWithAuth]
+  );
+
   return (
     <AuthContext.Provider
-      value={{ user, accessToken, signIn, signOut, fetchWithAuth }}
+      value={{
+        user,
+        accessToken,
+        signIn,
+        signOut,
+        fetchWithAuth,
+        userRoles,
+        loadCompetitionRoles,
+      }}
     >
       {children}
     </AuthContext.Provider>

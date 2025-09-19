@@ -1,8 +1,8 @@
 // src/components/PersonCard.tsx
 import type { PersonCardProps } from "../../types";
-import { convertResult } from "../utils";
-import { useAuth } from "../api/AuthContext";
-import { useState } from "react";
+import { convertResult, parseTimeToCentiseconds } from "../utils";
+import { useAuth } from "../context/AuthContext";
+import { useState, useRef, useEffect } from "react";
 
 const PersonCard = ({
   id,
@@ -11,8 +11,31 @@ const PersonCard = ({
   remainingTime,
   usedTime,
 }: PersonCardProps) => {
-  const { fetchWithAuth, user } = useAuth();
+  const { fetchWithAuth, user, userRoles, loadCompetitionRoles } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [modifiedValues, setModifiedValues] = useState<{
+    [key: string]: string;
+  }>({});
+  const inputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  const [hasEditPermission, setHasEditPermission] = useState(false);
+
+  const competitionId = "BudapestSpecial2024";
+
+  // Betöltjük a felhasználó szerepeit
+  useEffect(() => {
+    if (user) {
+      loadCompetitionRoles(competitionId);
+    }
+  }, [user, loadCompetitionRoles]);
+
+  // Ellenőrizzük, hogy a felhasználónak van-e szerkesztési jogosultsága
+  useEffect(() => {
+    const competitionRole = userRoles.find(
+      (role) => role.competitionId === competitionId
+    );
+    const canEdit = competitionRole?.isDelegate || competitionRole?.isOrganizer;
+    setHasEditPermission(!!canEdit);
+  }, [userRoles, competitionId]);
 
   const getMaxAttempts = () => {
     return Math.max(...results.map((res) => res.times.length), 5);
@@ -20,100 +43,150 @@ const PersonCard = ({
 
   const maxAttempts = getMaxAttempts();
 
-  const handleTimeUpdate = async (
-    personId: number,
-    personName: string,
-    eventId: string,
-    roundId: string,
-    attemptIndex: number,
-    newValue: string
-  ) => {
+  // Fókuszálás a következő inputra
+  const focusNextInput = (currentKey: string) => {
+    const keys = Object.keys(inputRefs.current);
+    const currentIndex = keys.indexOf(currentKey);
+
+    if (currentIndex < keys.length - 1) {
+      const nextKey = keys[currentIndex + 1];
+      inputRefs.current[nextKey]?.focus();
+    }
+  };
+
+  // Input érték változás kezelése
+  const handleInputChange = (key: string, value: string) => {
+    setModifiedValues((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // Enter kezelése - következő inputra ugrik
+  const handleKeyPress = (e: React.KeyboardEvent, key: string) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      focusNextInput(key);
+    }
+  };
+
+  // CSAK AZ ADOTT PERSONCARD MENTÉSE - EGY API HÍVÁS
+  const saveAllChanges = async () => {
     if (!user) {
       alert("Be kell jelentkezned az eredmények módosításához");
       return;
     }
 
-    if (!newValue.trim()) {
-      return; // Nem változott vagy üres érték
+    if (!hasEditPermission) {
+      alert("Nincs jogosultságod az eredmények módosításához");
+      return;
+    }
+
+    if (Object.keys(modifiedValues).length === 0) {
+      alert("Nincsenek módosított értékek a mentéshez");
+      return;
     }
 
     setIsUpdating(true);
 
     try {
-      // Először lekérjük a jelenlegi WCIF-et
-      const response = await fetchWithAuth(
-        `https://www.worldcubeassociation.org/api/v0/competitions/BudapestSpecial2024/wcif`
-      );
+      // CSAK AZ ADOTT PERSONCARD EXTENSION-JEI
+      const extensionsToUpdate = [];
 
-      if (!response.ok) {
-        throw new Error(`HTTP hiba a WCIF lekérésnél: ${response.status}`);
+      // Minden módosított értékhez létrehozunk egy extension-t
+      for (const [key, newValue] of Object.entries(modifiedValues)) {
+        // Kulcs feldolgozása - egyszerű regex-el
+        const match = key.match(/pid-(\d+)-evt-(\w+)-att-(\d+)/);
+
+        if (!match) {
+          console.error("Érvénytelen kulcs formátum:", key);
+          continue;
+        }
+
+        const personId = match[1];
+        const eventId = match[2];
+        const attemptIndex = parseInt(match[3]);
+        const roundId = `${eventId}-r1`;
+
+        const extensionId = `hungarian.time.${personId}.${eventId}.${attemptIndex}`;
+
+        const newExtension = {
+          id: extensionId,
+          specUrl: "https://example.com/hungarian-time-extension",
+          data: {
+            personId: parseInt(personId),
+            personName: name,
+            eventId,
+            roundId,
+            attemptIndex: attemptIndex,
+            newValue,
+          },
+        };
+
+        extensionsToUpdate.push(newExtension);
       }
 
-      const wcif = await response.json();
-
-      // Készítsük el az extension adatot a megfelelő formátumban
-      const extensionId = `hungarian.time.${personId}.${eventId}.${attemptIndex}`;
-
-      // Megnézzük, van-e már extension, ha igen, azt frissítjük
-      const existingExtensions = wcif.extensions || [];
-      const existingExtensionIndex = existingExtensions.findIndex(
-        (ext: any) => ext.id === extensionId
-      );
-
-      const newExtension = {
-        id: extensionId,
-        specUrl: "https://example.com/hungarian-time-extension",
-        data: {
-          personId,
-          personName,
-          eventId,
-          roundId,
-          attemptIndex,
-          newValue,
-          updatedAt: new Date().toISOString(),
-        },
-      };
-
-      if (existingExtensionIndex >= 0) {
-        // Frissítjük a meglévő extensiont
-        existingExtensions[existingExtensionIndex] = newExtension;
-      } else {
-        // Új extensiont adunk hozzá
-        existingExtensions.push(newExtension);
-      }
-
-      // Küldjük el a PATCH kérést CSAK az extensions mezővel
+      // CSAK EGY API HÍVÁS - csak a módosított extensionökkel
       const patchResponse = await fetchWithAuth(
-        `https://www.worldcubeassociation.org/api/v0/competitions/BudapestSpecial2024/wcif`,
+        `https://www.worldcubeassociation.org/api/v0/competitions/${competitionId}/wcif`,
         {
           method: "PATCH",
-          body: JSON.stringify({ extensions: existingExtensions }),
+          body: JSON.stringify({ extensions: extensionsToUpdate }),
         }
       );
 
       if (!patchResponse.ok) {
         const errorText = await patchResponse.text();
-        console.error("Patch response error:", errorText);
-        throw new Error(`HTTP hiba a frissítésnél: ${patchResponse.status}`);
+        throw new Error(
+          `HTTP hiba a frissítésnél: ${patchResponse.status} - ${errorText}`
+        );
       }
 
-      console.log("Idő frissítve extensionként");
-      alert("Idő sikeresen frissítve!");
+      console.log("PersonCard módosításai elmentve");
+      alert("Módosítások sikeresen elmentve!");
+
+      // Reseteljük a módosított értékeket
+      setModifiedValues({});
     } catch (error) {
-      console.error("Hiba az idő frissítésekor:", error);
-      alert(`Hiba történt: ${error}`);
+      console.error("Hiba a mentés során:", error);
+      if (String(error).includes("429")) {
+        alert(
+          "Túl gyakran küldesz kéréseket. Várj egy kicsit és próbáld újra."
+        );
+      } else {
+        alert(`Hiba történt: ${error}`);
+      }
     } finally {
       setIsUpdating(false);
     }
   };
 
+  // Input referencia beállítása
+  const setInputRef = (key: string, el: HTMLInputElement | null) => {
+    inputRefs.current[key] = el;
+  };
+
+  // Egyszerű és egyértelmű kulcs generálás
+  const generateInputKey = (eventId: string, attemptIndex: number) => {
+    return `pid-${id}-evt-${eventId}-att-${attemptIndex}`;
+  };
+
   return (
     <div className="bg-white rounded-lg px-6 py-2 border-1 shadow-xl border-gray-700 mx-0.5 dark:bg-sky-900/50 dark:text-gray-50">
-      <div className="justify-items-center">
-        <h2 className="text-lg font-bold mb-4 text-center dark:text-white">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-bold text-center dark:text-white">
           ({id}) {name}
         </h2>
+
+        {/* Csak akkor jelenik meg a mentés gomb, ha van szerkesztési jogosultság */}
+        {hasEditPermission && (
+          <button
+            onClick={saveAllChanges}
+            disabled={isUpdating || Object.keys(modifiedValues).length === 0}
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {isUpdating ? "Mentés..." : "Mentés"}
+          </button>
+        )}
       </div>
+
       <div className="justify-items-stretch">
         <table className="table-auto text-sm w-full dark:text-gray-200">
           <thead className="text-center">
@@ -139,39 +212,34 @@ const PersonCard = ({
                     className={`cubing-icon event-${res.categoryId} text-2xl`}
                   ></span>
                 </td>
-                {res.times.map((time, i) => (
-                  <td key={i} className="hidden sm:table-cell py-1">
-                    {time !== "DNF" && time !== "DNS" ? (
-                      time
-                    ) : (
-                      <input
-                        type="text"
-                        placeholder={time}
-                        maxLength={8}
-                        className="w-15 text-center placeholder-red-600 border rounded"
-                        disabled={isUpdating}
-                        onBlur={(e) => {
-                          const val = e.target.value.trim();
-                          if (val) {
-                            handleTimeUpdate(
-                              id,
-                              name,
-                              res.categoryId,
-                              `${res.categoryId}-r1`,
-                              i,
-                              time
-                            );
+                {res.times.map((time, i) => {
+                  const inputKey = generateInputKey(res.categoryId, i);
+                  const isModified = modifiedValues[inputKey] !== undefined;
+
+                  return (
+                    <td key={i} className="hidden sm:table-cell py-1">
+                      {time !== "DNF" && time !== "DNS" ? (
+                        time
+                      ) : (
+                        <input
+                          ref={(el) => setInputRef(inputKey, el)}
+                          type="text"
+                          placeholder={time}
+                          defaultValue={modifiedValues[inputKey] || ""}
+                          maxLength={8}
+                          className={`w-15 text-center placeholder-red-600 border rounded ${
+                            isModified ? "bg-yellow-100" : ""
+                          } ${hasEditPermission ? "" : "cursor-not-allowed"}`}
+                          onChange={(e) =>
+                            handleInputChange(inputKey, e.target.value)
                           }
-                        }}
-                        onKeyPress={(e) => {
-                          if (e.key === "Enter") {
-                            e.currentTarget.blur();
-                          }
-                        }}
-                      />
-                    )}
-                  </td>
-                ))}
+                          onKeyPress={(e) => handleKeyPress(e, inputKey)}
+                          disabled={!hasEditPermission}
+                        />
+                      )}
+                    </td>
+                  );
+                })}
                 {Array.from(
                   { length: maxAttempts - res.times.length },
                   (_, i) => (
@@ -190,6 +258,7 @@ const PersonCard = ({
           </tbody>
         </table>
       </div>
+
       <div className="justify-items-stretch mt-3">
         <table className="table-auto w-full">
           <thead className="text-center">
@@ -206,6 +275,12 @@ const PersonCard = ({
           </tbody>
         </table>
       </div>
+
+      {hasEditPermission && Object.keys(modifiedValues).length > 0 && (
+        <div className="mt-2 text-xs text-yellow-600">
+          {Object.keys(modifiedValues).length} módosított érték vár mentésre
+        </div>
+      )}
     </div>
   );
 };
