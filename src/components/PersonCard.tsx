@@ -1,6 +1,5 @@
 import type { PersonCardProps } from "../types";
-import { convertResult } from "../utils/utils";
-import { formatTimeInput } from "../utils/personCardUtils";
+import { formatTimeInput, convertResult } from "../utils/personCardUtils";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
 
@@ -134,7 +133,7 @@ const PersonCard = ({
 
                   return (
                     <td key={i} className="hidden sm:table-cell py-1">
-                      {time !== "DNF" && time !== "DNS" ? (
+                      {time !== "DNF" ? (
                         time
                       ) : (
                         <input
@@ -192,12 +191,6 @@ const PersonCard = ({
           </tbody>
         </table>
       </div>
-
-      {hasEditPermission && Object.keys(modifiedValues).length > 0 && (
-        <div className="mt-2 text-xs text-yellow-600">
-          {Object.keys(modifiedValues).length} módosított érték vár mentésre
-        </div>
-      )}
     </div>
   );
 };
