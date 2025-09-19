@@ -95,25 +95,3 @@ export interface InputManagementReturn {
   focusNextInput: (currentKey: string) => void;
   clearModifiedValues: () => void;
 }
-
-export interface ModifiedAttempt {
-  eventId: string;
-  roundId: string;
-  attemptIndex: number;
-  newValue: string;
-  modifiedAt: string;
-}
-
-export interface PersonExtensionData {
-  personId: number;
-  personName: string;
-  competitionId: string;
-  modifiedAttempts: ModifiedAttempt[];
-  lastUpdated: string;
-}
-
-export interface PersonExtension {
-  id: string;
-  specUrl: string;
-  data: PersonExtensionData;
-}

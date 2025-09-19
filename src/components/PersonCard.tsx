@@ -16,11 +16,7 @@ import { useInputManagement } from "../hooks/useInputManagement";
 import { useWcifService } from "../services/wcifService";
 
 // Utils
-import {
-  getMaxAttempts,
-  generateInputKey,
-  createPersonExtension,
-} from "../utils/personCardUtils";
+import { getMaxAttempts, generateInputKey } from "../utils/personCardUtils";
 
 // Extend the PersonCardProps interface locally
 interface ExtendedPersonCardProps extends PersonCardProps {
@@ -114,20 +110,70 @@ const PersonCard = ({
       const wcif = await getWcif(competitionId);
       const existingExtensions = wcif.extensions || [];
 
-      // 2. Régi extension eltávolítása
+      // 2. Megkeressük a személy meglévő extension-jét
+      const existingPersonExtension = existingExtensions.find(
+        (ext: any) => ext.id === `hungarian.times.person.${id}`
+      );
+
+      // 3. Meglévő módosítások betöltése (ha vannak)
+      const existingModifiedAttempts = existingPersonExtension
+        ? existingPersonExtension.data.modifiedAttempts
+        : [];
+
+      // 4. Új módosítások hozzáadása/módosítása
+      const updatedModifiedAttempts = [...existingModifiedAttempts];
+
+      for (const [key, formattedValue] of Object.entries(modifiedValues)) {
+        const match = key.match(/pid-(\d+)-evt-(\w+)-att-(\d+)/);
+        if (!match) continue;
+
+        const eventId = match[2];
+        const attemptIndex = parseInt(match[3]);
+        const centiseconds = formattedTimeToCentiseconds(formattedValue);
+
+        // Megkeressük, hogy ez az attempt már létezik-e
+        const existingIndex = updatedModifiedAttempts.findIndex(
+          (attempt: any) =>
+            attempt.eventId === eventId && attempt.attemptIndex === attemptIndex
+        );
+
+        if (existingIndex !== -1) {
+          // Módosítjuk a meglévőt
+          updatedModifiedAttempts[existingIndex] = {
+            ...updatedModifiedAttempts[existingIndex],
+            newValue: centiseconds.toString(),
+            modifiedAt: new Date().toISOString(),
+          };
+        } else {
+          // Új attempt hozzáadása
+          updatedModifiedAttempts.push({
+            eventId,
+            roundId: `${eventId}-r1`,
+            attemptIndex,
+            newValue: centiseconds.toString(),
+            modifiedAt: new Date().toISOString(),
+          });
+        }
+      }
+
+      // 5. Új extension létrehozása
+      const personExtension = {
+        id: `hungarian.times.person.${id}`,
+        specUrl: "https://example.com/hungarian-person-times-extension",
+        data: {
+          personId: id,
+          personName: name,
+          competitionId,
+          modifiedAttempts: updatedModifiedAttempts,
+          lastUpdated: new Date().toISOString(),
+        },
+      };
+
+      // 6. Régi extension eltávolítása és új hozzáadása
       const filteredExtensions = existingExtensions.filter(
-        (ext: any) => !ext.id.startsWith(`hungarian.times.person.${id}`)
+        (ext: any) => ext.id !== `hungarian.times.person.${id}`
       );
 
-      // 3. Új extension létrehozása
-      const personExtension = createPersonExtension(
-        id,
-        name,
-        competitionId,
-        modifiedValues
-      );
-
-      // 4. Extension hozzáadása és mentés
       const updatedExtensions = [...filteredExtensions, personExtension];
       await updateWcifExtensions(competitionId, updatedExtensions);
 
