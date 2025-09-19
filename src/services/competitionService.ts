@@ -4,7 +4,6 @@ import type {
   Result,
   Person,
   Event,
-  Round,
   ResultEntry,
 } from "../types";
 

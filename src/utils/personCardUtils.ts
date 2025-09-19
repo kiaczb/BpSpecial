@@ -49,3 +49,28 @@ export const createPersonExtension = (
     },
   };
 };
+
+// utils/timeFormatter.ts
+export function formatTimeInput(value: string): string {
+  const digits = value.replace(/\D/g, ""); // csak számok
+
+  if (!digits) return "";
+
+  if (digits.length <= 2) {
+    // csak századok
+    return `0.${digits.padStart(2, "0")}`;
+  }
+
+  if (digits.length <= 4) {
+    // ss.cc
+    const seconds = digits.slice(0, -2);
+    const centis = digits.slice(-2);
+    return `${parseInt(seconds, 10)}.${centis}`;
+  }
+
+  // perc : másodperc . centi
+  const minutes = digits.slice(0, -4);
+  const seconds = digits.slice(-4, -2);
+  const centis = digits.slice(-2);
+  return `${parseInt(minutes, 10)}:${seconds}.${centis}`;
+}

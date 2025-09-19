@@ -1,5 +1,6 @@
 import type { PersonCardProps } from "../types";
 import { convertResult } from "../utils/utils";
+import { formatTimeInput } from "../utils/personCardUtils";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
 
@@ -140,15 +141,16 @@ const PersonCard = ({
                           ref={(el) => setInputRef(inputKey, el)}
                           type="text"
                           placeholder={time}
-                          defaultValue={modifiedValues[inputKey] || ""}
+                          value={modifiedValues[inputKey] || ""}
                           maxLength={8}
                           className={`w-15 text-center placeholder-red-600 border rounded ${
                             isModified ? "bg-yellow-100" : ""
                           } ${hasEditPermission ? "" : "cursor-not-allowed"}`}
-                          onChange={(e) =>
-                            handleInputChange(inputKey, e.target.value)
-                          }
-                          onKeyPress={(e) => handleKeyPress(e, inputKey)}
+                          onChange={(e) => {
+                            const formatted = formatTimeInput(e.target.value);
+                            handleInputChange(inputKey, formatted);
+                          }}
+                          onKeyPress={(e) => handleKeyPress(e, inputKey)} // ← EZT ADTUK HOZZÁ
                           disabled={!hasEditPermission}
                         />
                       )}
