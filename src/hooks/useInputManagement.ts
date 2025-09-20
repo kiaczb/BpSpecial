@@ -1,4 +1,4 @@
-// hooks/useInputManagement.ts
+// src/hooks/useInputManagement.ts
 import { useState, useRef, useCallback } from "react";
 import type { InputManagementReturn } from "../types";
 
@@ -11,6 +11,13 @@ export const useInputManagement = (): InputManagementReturn => {
   const handleInputChange = useCallback((key: string, value: string): void => {
     setModifiedValues((prev) => ({ ...prev, [key]: value }));
   }, []);
+
+  const setInputRef = useCallback(
+    (key: string, el: HTMLInputElement | null): void => {
+      inputRefs.current[key] = el;
+    },
+    []
+  );
 
   const focusNextInput = useCallback((currentKey: string): void => {
     const keys = Object.keys(inputRefs.current);
@@ -26,18 +33,11 @@ export const useInputManagement = (): InputManagementReturn => {
     }
   }, []);
 
-  const setInputRef = useCallback(
-    (key: string, el: HTMLInputElement | null): void => {
-      inputRefs.current[key] = el;
-    },
-    []
-  );
-
   return {
     modifiedValues,
     handleInputChange,
     setInputRef,
     focusNextInput,
-    inputRefs: inputRefs.current, // Hozzáadjuk a refs-eket
+    inputRefs: inputRefs.current,
   };
 };

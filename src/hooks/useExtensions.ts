@@ -1,12 +1,6 @@
 // hooks/useExtensions.ts
 import { useState, useEffect } from "react";
-
-// Helper function (ugyanaz, mint a CompetitionService-ben)
-const isAuthenticated = (): boolean => {
-  const accessToken = localStorage.getItem("WCAApp.accessToken");
-  const expiry = localStorage.getItem("WCAApp.tokenExpiry");
-  return !!accessToken && !!expiry && Date.now() < parseInt(expiry, 10);
-};
+import { isAuthenticated } from "../utils/authUtils";
 
 export const useExtensions = (competitionId: string) => {
   const [extensions, setExtensions] = useState<any[]>([]);
