@@ -11,6 +11,7 @@ export interface ExtendedPersonCardProps extends PersonCardProps {
   extensionsLoading?: boolean;
   shouldFocus?: boolean;
   onFocusComplete?: () => void;
+  onSaveComplete?: () => void;
 }
 
 export interface Result {
@@ -105,5 +106,5 @@ export interface InputManagementReturn {
 export interface SearchBarProps {
   query: string;
   onChange: (value: string) => void;
-  onSearch: (query: string) => void; // Új property
+  onSearch: (query: string) => void;
 }

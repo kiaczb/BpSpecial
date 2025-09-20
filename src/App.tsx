@@ -1,5 +1,5 @@
 // App.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import PersonCard from "./components/PersonCard";
 import SearchBar from "./components/SearchBar";
 import LoginBar from "./components/LoginBar";
@@ -9,7 +9,6 @@ import type { PersonCardProps } from "./types";
 import { useAuth } from "./context/AuthContext";
 import { useExtensions } from "./hooks/useExtensions";
 
-// App.tsx
 function App() {
   const [personResults, setPersonResults] = useState<PersonCardProps[]>([]);
   const [competitionName, setCompetitionName] = useState<string>("");
@@ -18,6 +17,9 @@ function App() {
   const { user, loadCompetitionRoles, userRoles } = useAuth();
   const [focusedPersonId, setFocusedPersonId] = useState<number | null>(null);
   const SELECTED_COMPETITION = import.meta.env.VITE_SELECTED_COMPETITION;
+
+  // Ref a SearchBar input elemére
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Csak egyszer lekérjük az extensions-öket
   const {
@@ -49,6 +51,13 @@ function App() {
       }
     }
   }, [user, loadCompetitionRoles, userRoles]);
+
+  // Oldal betöltésekor fókusz a SearchBar-ra
+  useEffect(() => {
+    if (!loading && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [loading]);
 
   if (loading) return <div className="p-4">Loading competition data…</div>;
 
@@ -82,6 +91,16 @@ function App() {
     setFocusedPersonId(null);
   };
 
+  // Save gomb után visszaállítjuk a fókuszt a SearchBar-ra
+  const handleSaveComplete = () => {
+    if (searchInputRef.current) {
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }, 100);
+    }
+  };
+
   return (
     <>
       <div className="mb-3">
@@ -91,7 +110,12 @@ function App() {
         <ExtensionManager />
       </div>
       <div className="mb-4">
-        <SearchBar query={query} onChange={setQuery} onSearch={handleSearch} />
+        <SearchBar
+          query={query}
+          onChange={setQuery}
+          onSearch={handleSearch}
+          ref={searchInputRef} // Átadjuk a ref-et
+        />
       </div>
 
       <div className="grid mx-2 grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
@@ -103,6 +127,7 @@ function App() {
             extensionsLoading={extensionsLoading}
             shouldFocus={focusedPersonId === p.id}
             onFocusComplete={handleFocusComplete}
+            onSaveComplete={handleSaveComplete} // Átadjuk a callback-et
           />
         ))}
       </div>

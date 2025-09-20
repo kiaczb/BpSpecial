@@ -1,4 +1,4 @@
-import type { PersonCardProps, Extension } from "../types";
+import type { ExtendedPersonCardProps } from "../types";
 import {
   formatTimeInput,
   convertResult,
@@ -20,14 +20,6 @@ import { getMaxAttempts, generateInputKey } from "../utils/personCardUtils";
 import type { CSSProperties } from "react";
 import { BeatLoader } from "react-spinners";
 
-// Extend the PersonCardProps interface locally
-interface ExtendedPersonCardProps extends PersonCardProps {
-  extensions?: Extension[];
-  extensionsLoading?: boolean;
-  shouldFocus?: boolean;
-  onFocusComplete?: () => void;
-}
-
 const PersonCard = ({
   id,
   name,
@@ -37,6 +29,7 @@ const PersonCard = ({
   extensions = [],
   shouldFocus = false,
   onFocusComplete,
+  onSaveComplete,
 }: ExtendedPersonCardProps) => {
   const { user } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
@@ -301,6 +294,8 @@ const PersonCard = ({
       console.log("Személy adatai elmentve");
       alert("Módosítások sikeresen elmentve!");
       setHasUncommittedChanges(false);
+
+      onSaveComplete?.();
     } catch (error) {
       console.error("Hiba a mentés során:", error);
       alert(`Hiba történt: ${error}`);
