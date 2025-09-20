@@ -8,7 +8,7 @@ const LoginButton: React.FC = () => {
   if (!user) {
     return (
       <button
-        className="text-l p-3 border-1 rounded-2xl text-amber-600 cursor-pointer dark:text-amber-400 dark:border-amber-400 dark:hover:bg-amber-400/10"
+        className="text-l font-bold p-3 border-2 rounded-2xl text-cyan-600 cursor-pointer hover:bg-cyan-600 duration-75 ease-in hover:text-white dark:text-emerald-500 dark:hover:bg-emerald-600 dark:hover:border-emerald-500"
         onClick={signIn}
       >
         Login with WCA
@@ -18,7 +18,7 @@ const LoginButton: React.FC = () => {
 
   return (
     <button
-      className="text-l p-3 border-1 rounded-2xl text-amber-600 cursor-pointer dark:text-amber-400 dark:border-amber-400 dark:hover:bg-amber-400/10"
+      className="text-l font-bold p-3 border-2 rounded-2xl text-white bg-cyan-600 border-cyan-500 cursor-pointer hover:bg-cyan-800 duration-75 ease-in dark:text-white dark:bg-emerald-600 dark:hover:bg-emerald-800 dark:border-emerald-500"
       onClick={signOut}
     >
       Logout ({user.name})

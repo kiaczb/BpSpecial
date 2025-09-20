@@ -16,16 +16,17 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const { user, loadCompetitionRoles, userRoles } = useAuth();
+  const SELECTED_COMPETITION = import.meta.env.VITE_SELECTED_COMPETITION;
 
   // Csak egyszer lekérjük az extensions-öket
   const {
     extensions,
     loading: extensionsLoading,
     error: extensionsError,
-  } = useExtensions("BudapestSpecial2024");
+  } = useExtensions(SELECTED_COMPETITION);
 
   useEffect(() => {
-    CompetitionService.fetchCompetitionData("BudapestSpecial2024")
+    CompetitionService.fetchCompetitionData(SELECTED_COMPETITION)
       .then(({ competitionName, personsWithResults }) => {
         setCompetitionName(competitionName);
         setPersonResults(personsWithResults);
@@ -39,11 +40,11 @@ function App() {
   useEffect(() => {
     if (user) {
       const hasRoles = userRoles.some(
-        (role) => role.competitionId === "BudapestSpecial2024"
+        (role) => role.competitionId === SELECTED_COMPETITION
       );
       if (!hasRoles) {
         console.log("Loading competition roles for user:", user.name);
-        loadCompetitionRoles("BudapestSpecial2024");
+        loadCompetitionRoles(SELECTED_COMPETITION);
       }
     }
   }, [user, loadCompetitionRoles, userRoles]);
@@ -68,9 +69,7 @@ function App() {
       <div className="mb-3">
         <LoginBar competitionName={competitionName} />
       </div>
-      <div>
-        <ExtensionManager />
-      </div>
+      <div>{/* <ExtensionManager /> */}</div>
       <div className="mb-4">
         <SearchBar query={query} onChange={setQuery} />
       </div>
