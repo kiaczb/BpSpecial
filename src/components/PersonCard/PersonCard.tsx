@@ -21,6 +21,7 @@ import { generateInputKey } from "../../utils/personCardUtils";
 import PersonCardHeader from "./PersonCardHeader";
 import PersonCardTable from "./PersonCardTable";
 import PersonCardTimeSummary from "./PersonCardTimeSummary";
+import { toast, Bounce } from "react-toastify";
 
 const PersonCard = ({
   id,
@@ -292,14 +293,40 @@ const PersonCard = ({
       const updatedExtensions = [...filteredExtensions, personExtension];
       await updateWcifExtensions(competitionId, updatedExtensions);
 
-      console.log("Személy adatai elmentve");
-      alert("Módosítások sikeresen elmentve!");
+      console.log("Saved person data succesfully");
+      //alert("Modifications saved");
+
+      toast.success("Saved succesfully!", {
+        position: "top-center",
+        autoClose: 2000,
+        hideProgressBar: true,
+        closeOnClick: false,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+        theme: "light",
+        transition: Bounce,
+      });
       setHasUncommittedChanges(false);
 
       onSaveComplete?.();
     } catch (error) {
-      console.error("Hiba a mentés során:", error);
-      alert(`Hiba történt: ${error}`);
+      console.error("Error during save:", error);
+      //alert(`Error: ${error}`);
+      toast.error(
+        `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        {
+          position: "top-center",
+          autoClose: 2000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+          transition: Bounce,
+        }
+      );
     } finally {
       setIsUpdating(false);
     }

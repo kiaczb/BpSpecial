@@ -8,6 +8,7 @@ import { CompetitionService } from "./services/competitionService";
 import type { PersonCardProps } from "./types";
 import { useAuth } from "./context/AuthContext";
 import { useExtensions } from "./hooks/useExtensions";
+import { ToastContainer, toast, Bounce } from "react-toastify";
 
 function App() {
   const [personResults, setPersonResults] = useState<PersonCardProps[]>([]);
@@ -103,12 +104,25 @@ function App() {
 
   return (
     <>
+      <ToastContainer
+        position="top-center"
+        autoClose={1200}
+        hideProgressBar
+        newestOnTop={false}
+        closeOnClick={false}
+        rtl={false}
+        pauseOnFocusLoss={false}
+        draggable={false}
+        pauseOnHover={false}
+        theme="light"
+        transition={Bounce}
+      />
       <div className="mb-3">
         <LoginBar competitionName={competitionName} />
       </div>
-      <div>
+      {/* <div>
         <ExtensionManager />
-      </div>
+      </div> */}
       <div className="mb-4">
         <SearchBar
           query={query}

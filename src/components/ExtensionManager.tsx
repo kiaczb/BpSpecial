@@ -47,11 +47,11 @@ const ExtensionManager = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      setMessage("Sikeresen írva az extensions-be!");
+      setMessage("Extension written successfully");
       console.log("Extension written successfully");
     } catch (error) {
       console.error("Error writing extension:", error);
-      setMessage(`Hiba történt: ${error}`);
+      setMessage(`Error: ${error}`);
     } finally {
       setIsUpdating(false);
     }
@@ -79,14 +79,14 @@ const ExtensionManager = () => {
       const extensions = wcif.extensions || [];
 
       if (extensions.length === 0) {
-        setMessage("Nincsenek extensions a WCIF-ben.");
+        setMessage("No extensions in WCIF");
       } else {
         setMessage(`Extensions found: ${extensions.length}`);
         console.log("Extensions:", extensions);
       }
     } catch (error) {
       console.error("Error reading extensions:", error);
-      setMessage(`Hiba történt: ${error}`);
+      setMessage(`Error: ${error}`);
     } finally {
       setIsUpdating(false);
     }
