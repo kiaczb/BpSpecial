@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import PersonCard from "./components/PersonCard/PersonCard";
 import SearchBar from "./components/SearchBar";
 import LoginBar from "./components/LoginBar";
-import ExtensionManager from "./components/ExtensionManager";
+//import ExtensionManager from "./components/ExtensionManager";
 import { CompetitionService } from "./services/competitionService";
 import type { PersonCardProps } from "./types";
 import { useAuth } from "./context/AuthContext";
