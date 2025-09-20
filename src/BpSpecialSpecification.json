@@ -1,0 +1,52 @@
+{
+  "$id": "https://kiaczb.github.io/BpSpecial/BpSpecialSpecification.json",
+  "title": "DnfAttempts",
+  "description": "WCIF extension for tracking DNF attempts in competition results.",
+  "type": "object",
+  "properties": {
+    "data": {
+      "description": "Container for DNF attempt information",
+      "type": "object",
+      "properties": {
+        "personId": {
+          "description": "Unique identifier of the competitor",
+          "type": "integer"
+        },
+        "personName": {
+          "description": "Full name of the competitor",
+          "type": "string"
+        },
+        "modifiedAttempts": {
+          "description": "Array of DNF attempts for this competitor",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "eventId": {
+                "description": "ID of the event (e.g., '333' for 3x3x3 Cube)",
+                "type": "string"
+              },
+              "roundId": {
+                "description": "ID of the round (e.g., '333-r1' for 3x3x3 Round 1)",
+                "type": "string"
+              },
+              "attemptIndex": {
+                "description": "Index of the attempt (1-5 for standard events)",
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5
+              },
+              "dnfValue": {
+                "description": "The original time value that was marked as DNF (Did Not Finish) in centiseconds",
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            },
+            "required": ["eventId", "roundId", "attemptIndex", "dnfValue"]
+          }
+        }
+      },
+      "required": ["personId", "personName", "DNFAttempts"]
+    }
+  }
+}

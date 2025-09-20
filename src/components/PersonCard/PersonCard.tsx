@@ -105,7 +105,7 @@ const PersonCard = ({
 
     personExtension.data.modifiedAttempts.forEach((attempt: any) => {
       const key = generateInputKey(id, attempt.eventId, attempt.attemptIndex);
-      times[key] = parseInt(attempt.newValue, 10);
+      times[key] = parseInt(attempt.dnfValue, 10);
     });
 
     return times;
@@ -232,14 +232,14 @@ const PersonCard = ({
         if (existingIndex !== -1) {
           updatedModifiedAttempts[existingIndex] = {
             ...updatedModifiedAttempts[existingIndex],
-            newValue: centiseconds.toString(),
+            dnfValue: centiseconds.toString(),
           };
         } else {
           updatedModifiedAttempts.push({
             eventId,
             roundId: `${eventId}-r1`,
             attemptIndex,
-            newValue: centiseconds.toString(),
+            dnfValue: centiseconds.toString(),
           });
         }
       }
