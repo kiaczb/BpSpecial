@@ -5,7 +5,7 @@ import {
   formattedTimeToCentiseconds,
 } from "../utils/personCardUtils";
 import { useAuth } from "../context/AuthContext";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 
 // Hooks
 import { useEditPermission } from "../hooks/useEditPermissions";
@@ -24,6 +24,8 @@ import { BeatLoader } from "react-spinners";
 interface ExtendedPersonCardProps extends PersonCardProps {
   extensions?: Extension[];
   extensionsLoading?: boolean;
+  shouldFocus?: boolean;
+  onFocusComplete?: () => void;
 }
 
 const PersonCard = ({
@@ -33,6 +35,8 @@ const PersonCard = ({
   remainingTime: initialRemainingTime,
   usedTime: initialUsedTime,
   extensions = [],
+  shouldFocus = false,
+  onFocusComplete,
 }: ExtendedPersonCardProps) => {
   const { user } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
@@ -40,8 +44,10 @@ const PersonCard = ({
 
   const competitionId = "BudapestSpecial2024";
   const hasEditPermission = useEditPermission(competitionId);
-  const { modifiedValues, handleInputChange, handleKeyPress, setInputRef } =
+  const { modifiedValues, handleInputChange, setInputRef, inputRefs } =
     useInputManagement();
+
+  const saveButtonRef = useRef<HTMLButtonElement>(null);
 
   // input change-nél mindig jelezzük, hogy van új változtatás
   const onInputChange = (key: string, value: string) => {
@@ -59,6 +65,43 @@ const PersonCard = ({
 
   const { getWcif, updateWcifExtensions } = useWcifService();
   const maxAttempts = getMaxAttempts(results);
+
+  // Fókusz az első inputra, ha kell
+  useEffect(() => {
+    if (shouldFocus && hasEditPermission) {
+      // Megkeressük az első DNF attempt-et
+      const firstDnfAttempt = results.flatMap((res) =>
+        res.times
+          .map((time, timeIndex) => ({ res, time, timeIndex }))
+          .filter(({ time }) => time === "DNF")
+          .map(({ res, timeIndex }) => ({
+            eventId: res.categoryId,
+            attemptIndex: timeIndex,
+          }))
+      )[0];
+
+      if (firstDnfAttempt) {
+        const firstInputKey = generateInputKey(
+          id,
+          firstDnfAttempt.eventId,
+          firstDnfAttempt.attemptIndex
+        );
+        const inputElement = inputRefs[firstInputKey];
+
+        if (inputElement) {
+          setTimeout(() => {
+            inputElement.focus();
+            inputElement.select();
+            onFocusComplete?.();
+          }, 100);
+        } else {
+          onFocusComplete?.();
+        }
+      } else {
+        onFocusComplete?.();
+      }
+    }
+  }, [shouldFocus, hasEditPermission, results, id, onFocusComplete, inputRefs]);
 
   // Extension-ből származó idők kinyerése és centisecond konverziója
   const extensionTimes = useMemo(() => {
@@ -139,6 +182,37 @@ const PersonCard = ({
     const inputValue = getInputValue(eventId, attemptIndex);
     if (inputValue) return inputValue;
     return originalTime;
+  };
+
+  // Input kezelés módosítása - Enterrel Save gombra ugrás
+  const handleInputKeyPress = (e: React.KeyboardEvent, key: string): void => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+
+      const keys = Object.keys(inputRefs);
+      const currentIndex = keys.indexOf(key);
+
+      if (currentIndex < keys.length - 1) {
+        // Következő input
+        const nextKey = keys[currentIndex + 1];
+        const nextInput = inputRefs[nextKey];
+        if (nextInput) {
+          nextInput.focus();
+          nextInput.select();
+        }
+      } else {
+        // Utolsó inputnál Save gombra ugrás
+        saveButtonRef.current?.focus();
+      }
+    }
+  };
+
+  // Save gomb Enter kezelése
+  const handleSaveKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !isUpdating && hasUncommittedChanges) {
+      e.preventDefault();
+      saveAllChanges();
+    }
   };
 
   const saveAllChanges = async (): Promise<void> => {
@@ -250,10 +324,13 @@ const PersonCard = ({
 
         {hasEditPermission && (
           <button
+            ref={saveButtonRef}
             onClick={saveAllChanges}
+            onKeyPress={handleSaveKeyPress}
             disabled={isUpdating || !hasUncommittedChanges}
             hidden={!hasUncommittedChanges && !isUpdating}
             className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-4 rounded text-l disabled:bg-gray-600 disabled:cursor-not-allowed absolute right-0 flex items-center justify-center min-w-[80px] dark:bg-green-700 dark:hover:bg-green-600 dark:disabled:bg-slate-700"
+            tabIndex={hasUncommittedChanges || isUpdating ? 0 : -1}
           >
             {isUpdating ? (
               <BeatLoader size={8} color="#ffffff" cssOverride={override} />
@@ -264,7 +341,6 @@ const PersonCard = ({
         )}
       </div>
 
-      {/* Táblázat rész */}
       <div className="justify-items-stretch">
         <table className="table-auto text-sm w-full dark:text-gray-200">
           <thead className="text-center">
@@ -325,7 +401,7 @@ const PersonCard = ({
                             const formatted = formatTimeInput(e.target.value);
                             onInputChange(inputKey, formatted);
                           }}
-                          onKeyPress={(e) => handleKeyPress(e, inputKey)}
+                          onKeyPress={(e) => handleInputKeyPress(e, inputKey)}
                           disabled={!hasEditPermission}
                           readOnly={!hasEditPermission}
                         />

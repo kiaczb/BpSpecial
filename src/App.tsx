@@ -16,6 +16,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const { user, loadCompetitionRoles, userRoles } = useAuth();
+  const [focusedPersonId, setFocusedPersonId] = useState<number | null>(null);
   const SELECTED_COMPETITION = import.meta.env.VITE_SELECTED_COMPETITION;
 
   // Csak egyszer lekérjük az extensions-öket
@@ -64,14 +65,33 @@ function App() {
       p.id.toString().includes(query)
   );
 
+  const handleSearch = (searchQuery: string) => {
+    if (searchQuery.trim()) {
+      const foundPerson = personResults.find(
+        (p) =>
+          p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.id.toString().includes(searchQuery)
+      );
+      if (foundPerson) {
+        setFocusedPersonId(foundPerson.id);
+      }
+    }
+  };
+
+  const handleFocusComplete = () => {
+    setFocusedPersonId(null);
+  };
+
   return (
     <>
       <div className="mb-3">
         <LoginBar competitionName={competitionName} />
       </div>
-      <div>{/* <ExtensionManager /> */}</div>
+      <div>
+        <ExtensionManager />
+      </div>
       <div className="mb-4">
-        <SearchBar query={query} onChange={setQuery} />
+        <SearchBar query={query} onChange={setQuery} onSearch={handleSearch} />
       </div>
 
       <div className="grid mx-2 grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
@@ -81,6 +101,8 @@ function App() {
             {...p}
             extensions={extensions}
             extensionsLoading={extensionsLoading}
+            shouldFocus={focusedPersonId === p.id}
+            onFocusComplete={handleFocusComplete}
           />
         ))}
       </div>

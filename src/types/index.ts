@@ -6,6 +6,13 @@ export interface PersonCardProps {
   usedTime: number;
 }
 
+export interface ExtendedPersonCardProps extends PersonCardProps {
+  extensions?: Extension[];
+  extensionsLoading?: boolean;
+  shouldFocus?: boolean;
+  onFocusComplete?: () => void;
+}
+
 export interface Result {
   categoryId: string;
   times: string[];
@@ -90,7 +97,13 @@ export interface AuthContextType {
 export interface InputManagementReturn {
   modifiedValues: { [key: string]: string };
   handleInputChange: (key: string, value: string) => void;
-  handleKeyPress: (e: React.KeyboardEvent, key: string) => void;
   setInputRef: (key: string, el: HTMLInputElement | null) => void;
   focusNextInput: (currentKey: string) => void;
+  inputRefs: { [key: string]: HTMLInputElement | null }; // Új property
+}
+
+export interface SearchBarProps {
+  query: string;
+  onChange: (value: string) => void;
+  onSearch: (query: string) => void; // Új property
 }

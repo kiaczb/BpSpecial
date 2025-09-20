@@ -1,12 +1,14 @@
-type SearchBarProps = {
-  query: string;
-  onChange: (value: string) => void;
-};
+import type { SearchBarProps } from "../types";
 
-const SearchBar = ({ query, onChange }: SearchBarProps) => {
+const SearchBar = ({ query, onChange, onSearch }: SearchBarProps) => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSearch(query); // Meghívjuk a keresés callback-et
+  };
+
   return (
     <div className="text-center">
-      <form className="max-w-md mx-auto" onSubmit={(e) => e.preventDefault()}>
+      <form className="max-w-md mx-auto" onSubmit={handleSubmit}>
         <div className="relative">
           <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none"></div>
           <input
