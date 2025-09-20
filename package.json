@@ -1,6 +1,7 @@
 {
   "name": "bpspecial",
   "private": true,
+  "homepage": "https:!!kiaczb.github.io/BpSpecial/",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
@@ -26,6 +27,7 @@
     "eslint": "^9.33.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
+    "gh-pages": "^6.3.0",
     "globals": "^16.3.0",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.39.1",
