@@ -246,7 +246,7 @@ const PersonCard = ({
             hidden={!hasUncommittedChanges && !isUpdating}
             className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            {isUpdating ? "Mentés..." : "Mentés"}
+            {isUpdating ? "Saving..." : "Save"}
           </button>
         )}
       </div>
@@ -281,13 +281,14 @@ const PersonCard = ({
                   const isModified = modifiedValues[inputKey] !== undefined;
                   const inputValue = getInputValue(res.categoryId, i);
                   const isDNF = time === "DNF";
+                  const isDNS = time === "DNS";
                   const displayTime = getDisplayTime(res.categoryId, i, time);
 
                   return (
                     <td
                       key={i}
                       className={`hidden sm:table-cell py-1 ${
-                        isDNF ? "text-red-600" : "text-black"
+                        isDNF || isDNS ? "text-red-600" : "text-black"
                       }`}
                     >
                       {!isDNF || !hasEditPermission ? (
@@ -327,8 +328,24 @@ const PersonCard = ({
                     </td>
                   )
                 )}
-                <td className="py-1">{res.average}</td>
-                <td className="py-1">{res.best}</td>
+                <td
+                  className={`${
+                    res.average == "DNF" || res.average == "DNS"
+                      ? "text-red-600"
+                      : "text-black"
+                  }`}
+                >
+                  {res.average}
+                </td>
+                <td
+                  className={`${
+                    res.best == "DNF" || res.best == "DNS"
+                      ? "text-red-600"
+                      : "text-black"
+                  }`}
+                >
+                  {res.best}
+                </td>
               </tr>
             ))}
           </tbody>

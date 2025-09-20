@@ -1,3 +1,4 @@
+// src/services/competitionService.ts
 import type {
   WCIF,
   PersonCardProps,
@@ -7,19 +8,50 @@ import type {
   ResultEntry,
 } from "../types";
 
+// Helper function to check auth status without React hooks
+const isAuthenticated = (): boolean => {
+  const accessToken = localStorage.getItem("WCAApp.accessToken");
+  const expiry = localStorage.getItem("WCAApp.tokenExpiry");
+  return !!accessToken && !!expiry && Date.now() < parseInt(expiry, 10);
+};
+
 export class CompetitionService {
   private static async fetchWcif(competitionId: string): Promise<WCIF> {
-    const response = await fetch(
-      `https://www.worldcubeassociation.org/api/v0/competitions/${competitionId}/wcif/public`
-    );
+    const isAuth = isAuthenticated();
+    const url = isAuth
+      ? `https://www.worldcubeassociation.org/api/v0/competitions/${competitionId}/wcif`
+      : `https://www.worldcubeassociation.org/api/v0/competitions/${competitionId}/wcif/public`;
+
+    console.log(`Fetching WCIF from: ${url}, authenticated: ${isAuth}`);
+
+    const options: RequestInit = isAuth
+      ? {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem(
+              "WCAApp.accessToken"
+            )}`,
+          },
+        }
+      : {};
+
+    const response = await fetch(url, options);
 
     if (!response.ok) {
-      throw new Error("Failed to fetch competition data");
+      if (response.status === 401 && isAuth) {
+        // Token expired or invalid, clear it and retry with public endpoint
+        localStorage.removeItem("WCAApp.accessToken");
+        localStorage.removeItem("WCAApp.tokenExpiry");
+        localStorage.removeItem("WCAApp.user");
+        console.log("Token invalid, falling back to public endpoint");
+        return this.fetchWcif(competitionId);
+      }
+      throw new Error(`Failed to fetch competition data: ${response.status}`);
     }
 
     return await response.json();
   }
 
+  // ... (a többi metódus változatlan marad)
   private static convertResult(resultValue: number, eventId: string): string {
     if (resultValue === -1) return "DNF";
     if (resultValue === -2) return "DNS";
