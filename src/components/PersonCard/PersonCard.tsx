@@ -246,7 +246,8 @@ const PersonCard = ({
 
       const personExtension = {
         id: `budapestSpecial.times.person.${id}`,
-        specUrl: "https://example.com/hungarian-person-times-extension",
+        specUrl:
+          "https://raw.githubusercontent.com/kiaczb/BpSpecial/refs/heads/main/BpSpecialSpecification.json",
         data: {
           personId: id,
           personName: name,
