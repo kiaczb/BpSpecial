@@ -6,6 +6,7 @@ const ExtensionManager = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [message, setMessage] = useState("");
 
+  const selectedCompetitionId = import.meta.env.VITE_SELECTED_COMPETITION;
   const writeExtension = async () => {
     if (!user) {
       alert("You need to be logged in to update extensions");
@@ -35,7 +36,7 @@ const ExtensionManager = () => {
       };
 
       const response = await fetchWithAuth(
-        `https://www.worldcubeassociation.org/api/v0/competitions/BudapestSpecial2024/wcif`,
+        `https://www.worldcubeassociation.org/api/v0/competitions/${selectedCompetitionId}/wcif`,
         {
           method: "PATCH",
           body: JSON.stringify(patchData),
@@ -67,7 +68,7 @@ const ExtensionManager = () => {
 
     try {
       const response = await fetchWithAuth(
-        `https://www.worldcubeassociation.org/api/v0/competitions/BudapestSpecial2024/wcif`
+        `https://www.worldcubeassociation.org/api/v0/competitions/${selectedCompetitionId}/wcif`
       );
 
       if (!response.ok) {

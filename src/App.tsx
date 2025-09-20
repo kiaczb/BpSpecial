@@ -115,9 +115,9 @@ function App() {
       <div className="mb-3">
         <LoginBar competitionName={competitionName} />
       </div>
-      {/* <div>
+      <div>
         <ExtensionManager />
-      </div> */}
+      </div>
       <div className="mb-4">
         <SearchBar
           query={query}

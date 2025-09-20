@@ -38,7 +38,7 @@ const PersonCard = ({
   const [isUpdating, setIsUpdating] = useState(false);
   const [hasUncommittedChanges, setHasUncommittedChanges] = useState(false);
 
-  const competitionId = "BudapestSpecial2024";
+  const competitionId = import.meta.env.VITE_SELECTED_COMPETITION;
   const hasEditPermission = useEditPermission(competitionId);
   const { modifiedValues, handleInputChange, setInputRef, inputRefs } =
     useInputManagement();
@@ -98,7 +98,7 @@ const PersonCard = ({
     const times: { [key: string]: number } = {};
 
     const personExtension = extensions.find(
-      (ext) => ext.id === `hungarian.times.person.${id}`
+      (ext) => ext.id === `budapestSpecial.times.person.${id}`
     );
 
     if (!personExtension) return times;
@@ -207,7 +207,7 @@ const PersonCard = ({
       const existingExtensions = wcif.extensions || [];
 
       const existingPersonExtension = existingExtensions.find(
-        (ext: any) => ext.id === `hungarian.times.person.${id}`
+        (ext: any) => ext.id === `budapestSpecial.times.person.${id}`
       );
 
       const existingModifiedAttempts = existingPersonExtension
@@ -233,7 +233,6 @@ const PersonCard = ({
           updatedModifiedAttempts[existingIndex] = {
             ...updatedModifiedAttempts[existingIndex],
             newValue: centiseconds.toString(),
-            modifiedAt: new Date().toISOString(),
           };
         } else {
           updatedModifiedAttempts.push({
@@ -241,25 +240,22 @@ const PersonCard = ({
             roundId: `${eventId}-r1`,
             attemptIndex,
             newValue: centiseconds.toString(),
-            modifiedAt: new Date().toISOString(),
           });
         }
       }
 
       const personExtension = {
-        id: `hungarian.times.person.${id}`,
+        id: `budapestSpecial.times.person.${id}`,
         specUrl: "https://example.com/hungarian-person-times-extension",
         data: {
           personId: id,
           personName: name,
-          competitionId,
           modifiedAttempts: updatedModifiedAttempts,
-          lastUpdated: new Date().toISOString(),
         },
       };
 
       const filteredExtensions = existingExtensions.filter(
-        (ext: any) => ext.id !== `hungarian.times.person.${id}`
+        (ext: any) => ext.id !== `budapestSpecial.times.person.${id}`
       );
 
       const updatedExtensions = [...filteredExtensions, personExtension];

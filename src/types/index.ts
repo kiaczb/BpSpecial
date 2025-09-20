@@ -100,7 +100,7 @@ export interface InputManagementReturn {
   handleInputChange: (key: string, value: string) => void;
   setInputRef: (key: string, el: HTMLInputElement | null) => void;
   focusNextInput: (currentKey: string) => void;
-  inputRefs: { [key: string]: HTMLInputElement | null }; // Új property
+  inputRefs: { [key: string]: HTMLInputElement | null };
 }
 
 export interface SearchBarProps {
