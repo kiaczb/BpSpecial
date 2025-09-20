@@ -12,6 +12,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const WCA_ORIGIN = import.meta.env.VITE_WCA_ORIGIN;
 const WCA_API_ORIGIN = import.meta.env.VITE_WCA_API_ORIGIN;
 const CLIENT_ID = import.meta.env.VITE_WCA_CLIENT_KEY;
+const REDIRECT_URI = "https://kiaczb.github.io/BpSpecial/";
 const localStorageKey = (key: string) => `WCAApp.${key}`;
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -32,35 +33,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   useEffect(() => {
-    // Hash fragment kezelése GitHub Pages kompatibilitással
     const hash = window.location.hash.replace(/^#/, "");
-
-    // Ha nincs hash, de van oauth_token a sessionStorage-ban (visszaérkezéskor)
-    if (!hash) {
-      const oauthToken = sessionStorage.getItem("oauth_token");
-      const oauthExpires = sessionStorage.getItem("oauth_expires");
-
-      if (oauthToken && oauthExpires) {
-        const expiryTime = Date.now() + parseInt(oauthExpires, 10) * 1000;
-
-        setAccessToken(oauthToken);
-        localStorage.setItem(localStorageKey("accessToken"), oauthToken);
-        localStorage.setItem(
-          localStorageKey("tokenExpiry"),
-          expiryTime.toString()
-        );
-
-        sessionStorage.removeItem("oauth_token");
-        sessionStorage.removeItem("oauth_expires");
-
-        window.history.replaceState(
-          {},
-          document.title,
-          window.location.pathname
-        );
-      }
-      return;
-    }
+    if (!hash) return;
 
     const params = new URLSearchParams(hash);
     const tokenFromUrl = params.get("access_token");
@@ -114,16 +88,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [accessToken]);
 
   const signIn = useCallback(() => {
-    // Átmeneti oldalra irányítunk, amely kezeli a hash fragmentet
-    const oauthHandlerUrl = `${window.location.origin}/oauth-handler.html`;
-
     const params = new URLSearchParams({
       client_id: CLIENT_ID,
       response_type: "token",
-      redirect_uri: oauthHandlerUrl, // Az átmeneti oldal, amely a root domainen van
+      redirect_uri: REDIRECT_URI,
       scope: "public manage_competitions",
     });
-
     window.location.href = `${WCA_ORIGIN}/oauth/authorize?${params.toString()}`;
   }, []);
 
