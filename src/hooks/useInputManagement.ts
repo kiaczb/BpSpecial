@@ -32,16 +32,11 @@ export const useInputManagement = (): InputManagementReturn => {
     inputRefs.current[key] = el;
   };
 
-  const clearModifiedValues = (): void => {
-    setModifiedValues({});
-  };
-
   return {
     modifiedValues,
     handleInputChange,
     handleKeyPress,
     setInputRef,
     focusNextInput,
-    clearModifiedValues,
   };
 };

@@ -33,16 +33,26 @@ const PersonCard = ({
 }: ExtendedPersonCardProps) => {
   const { user } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [hasUncommittedChanges, setHasUncommittedChanges] = useState(false);
 
   const competitionId = "BudapestSpecial2024";
   const hasEditPermission = useEditPermission(competitionId);
-  const {
-    modifiedValues,
-    handleInputChange,
-    handleKeyPress,
-    setInputRef,
-    clearModifiedValues,
-  } = useInputManagement();
+  const { modifiedValues, handleInputChange, handleKeyPress, setInputRef } =
+    useInputManagement();
+
+  // input change-nél mindig jelezzük, hogy van új változtatás
+  const onInputChange = (key: string, value: string) => {
+    const formatted = formatTimeInput(value);
+
+    // Ha a formázott érték 0 vagy 0.00 → DNF / üres
+    if (formatted === "0" || formatted === "0.00" || formatted === "") {
+      handleInputChange(key, ""); // üres string → visszaáll a DNF/placeholder
+    } else {
+      handleInputChange(key, formatted);
+    }
+
+    setHasUncommittedChanges(true);
+  };
 
   const { getWcif, updateWcifExtensions } = useWcifService();
   const maxAttempts = getMaxAttempts(results);
@@ -213,7 +223,7 @@ const PersonCard = ({
 
       console.log("Személy adatai elmentve");
       alert("Módosítások sikeresen elmentve!");
-      clearModifiedValues();
+      setHasUncommittedChanges(false);
     } catch (error) {
       console.error("Hiba a mentés során:", error);
       alert(`Hiba történt: ${error}`);
@@ -232,7 +242,8 @@ const PersonCard = ({
         {hasEditPermission && (
           <button
             onClick={saveAllChanges}
-            disabled={isUpdating || Object.keys(modifiedValues).length === 0}
+            disabled={isUpdating || !hasUncommittedChanges}
+            hidden={!hasUncommittedChanges && !isUpdating}
             className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             {isUpdating ? "Mentés..." : "Mentés"}
@@ -295,7 +306,7 @@ const PersonCard = ({
                           } ${hasEditPermission ? "" : "cursor-not-allowed"}`}
                           onChange={(e) => {
                             const formatted = formatTimeInput(e.target.value);
-                            handleInputChange(inputKey, formatted);
+                            onInputChange(inputKey, formatted);
                           }}
                           onKeyPress={(e) => handleKeyPress(e, inputKey)}
                           disabled={!hasEditPermission}

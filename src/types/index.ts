@@ -93,5 +93,4 @@ export interface InputManagementReturn {
   handleKeyPress: (e: React.KeyboardEvent, key: string) => void;
   setInputRef: (key: string, el: HTMLInputElement | null) => void;
   focusNextInput: (currentKey: string) => void;
-  clearModifiedValues: () => void;
 }

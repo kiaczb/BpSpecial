@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import PersonCard from "./components/PersonCard";
 import SearchBar from "./components/SearchBar";
 import LoginBar from "./components/LoginBar";
-//import ExtensionManager from "./components/ExtensionManager";
+import ExtensionManager from "./components/ExtensionManager";
 import { CompetitionService } from "./services/competitionService";
 import type { PersonCardProps } from "./types";
 import { useAuth } from "./context/AuthContext";
@@ -68,7 +68,9 @@ function App() {
       <div className="mb-3">
         <LoginBar competitionName={competitionName} />
       </div>
-
+      <div>
+        <ExtensionManager />
+      </div>
       <div className="mb-4">
         <SearchBar query={query} onChange={setQuery} />
       </div>
