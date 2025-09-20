@@ -9,6 +9,7 @@ import type { PersonCardProps } from "./types";
 import { useAuth } from "./context/AuthContext";
 import { useExtensions } from "./hooks/useExtensions";
 
+// App.tsx
 function App() {
   const [personResults, setPersonResults] = useState<PersonCardProps[]>([]);
   const [competitionName, setCompetitionName] = useState<string>("");
@@ -17,9 +18,11 @@ function App() {
   const { user, loadCompetitionRoles, userRoles } = useAuth();
 
   // Csak egyszer lekérjük az extensions-öket
-  const { extensions, loading: extensionsLoading } = useExtensions(
-    "BudapestSpecial2024"
-  );
+  const {
+    extensions,
+    loading: extensionsLoading,
+    error: extensionsError,
+  } = useExtensions("BudapestSpecial2024");
 
   useEffect(() => {
     CompetitionService.fetchCompetitionData("BudapestSpecial2024")
@@ -45,7 +48,14 @@ function App() {
     }
   }, [user, loadCompetitionRoles, userRoles]);
 
-  if (loading || extensionsLoading) return <div className="p-4">Loading…</div>;
+  if (loading) return <div className="p-4">Loading competition data…</div>;
+
+  if (extensionsError) {
+    console.warn(
+      "Extensions loading failed, but continuing without them:",
+      extensionsError
+    );
+  }
 
   const filteredResults = personResults.filter(
     (p) =>
@@ -59,17 +69,18 @@ function App() {
         <LoginBar competitionName={competitionName} />
       </div>
 
-      {/* <div className="mb-4">
-        <ExtensionManager extensions={extensions} />
-      </div> */}
-
       <div className="mb-4">
         <SearchBar query={query} onChange={setQuery} />
       </div>
 
       <div className="grid mx-2 grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
         {filteredResults.map((p) => (
-          <PersonCard key={p.id} {...p} extensions={extensions} />
+          <PersonCard
+            key={p.id}
+            {...p}
+            extensions={extensions}
+            extensionsLoading={extensionsLoading}
+          />
         ))}
       </div>
     </>

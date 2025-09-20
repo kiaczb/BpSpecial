@@ -20,6 +20,7 @@ import { getMaxAttempts, generateInputKey } from "../utils/personCardUtils";
 // Extend the PersonCardProps interface locally
 interface ExtendedPersonCardProps extends PersonCardProps {
   extensions?: Extension[];
+  extensionsLoading?: boolean;
 }
 
 const PersonCard = ({
@@ -94,28 +95,36 @@ const PersonCard = ({
     };
   }, [initialRemainingTime, initialUsedTime, extensionTimes, modifiedValues]);
 
+  // Input mező értékének meghatározása
+  const getInputValue = (eventId: string, attemptIndex: number): string => {
+    const modifiedKey = generateInputKey(id, eventId, attemptIndex);
+
+    // 1. Ha van módosított érték
+    if (modifiedValues[modifiedKey] !== undefined) {
+      return modifiedValues[modifiedKey];
+    }
+
+    // 2. Ha van extension érték és az nem DNF/DNS
+    if (extensionTimes[modifiedKey] !== undefined) {
+      const centiseconds = extensionTimes[modifiedKey];
+      const converted = convertResult(centiseconds, eventId);
+      if (converted !== "DNF" && converted !== "DNS") {
+        return converted;
+      }
+    }
+
+    // 3. Alapértelmezett: üres string
+    return "";
+  };
+
   // DNF-ek helyettesítése extensions-ből
   const getDisplayTime = (
     eventId: string,
     attemptIndex: number,
     originalTime: string
   ): string => {
-    if (originalTime !== "DNF" && originalTime !== "DNS") {
-      return originalTime;
-    }
-
-    // Először nézzük a módosított értékeket
-    const modifiedKey = generateInputKey(id, eventId, attemptIndex);
-    if (modifiedValues[modifiedKey] !== undefined) {
-      return modifiedValues[modifiedKey];
-    }
-
-    // Majd az extension-ből
-    if (extensionTimes[modifiedKey] !== undefined) {
-      const centiseconds = extensionTimes[modifiedKey];
-      return convertResult(centiseconds, eventId);
-    }
-
+    const inputValue = getInputValue(eventId, attemptIndex);
+    if (inputValue) return inputValue;
     return originalTime;
   };
 
@@ -259,11 +268,18 @@ const PersonCard = ({
                 {res.times.map((time, i) => {
                   const inputKey = generateInputKey(id, res.categoryId, i);
                   const isModified = modifiedValues[inputKey] !== undefined;
+                  const inputValue = getInputValue(res.categoryId, i);
+                  const isDNF = time === "DNF";
                   const displayTime = getDisplayTime(res.categoryId, i, time);
 
                   return (
-                    <td key={i} className="hidden sm:table-cell py-1">
-                      {time !== "DNF" && time !== "DNS" ? (
+                    <td
+                      key={i}
+                      className={`hidden sm:table-cell py-1 ${
+                        isDNF ? "text-red-600" : "text-black"
+                      }`}
+                    >
+                      {!isDNF || !hasEditPermission ? (
                         // Ha az eredeti nem DNF/DNS → csak szöveg
                         displayTime
                       ) : (
@@ -271,13 +287,8 @@ const PersonCard = ({
                         <input
                           ref={(el) => setInputRef(inputKey, el)}
                           type="text"
-                          value={
-                            modifiedValues[inputKey] ??
-                            (displayTime !== "DNF" && displayTime !== "DNS"
-                              ? displayTime
-                              : "")
-                          }
-                          placeholder={time} // ← mindig az eredeti érték (pl. "DNF")
+                          value={inputValue}
+                          placeholder={time}
                           maxLength={8}
                           className={`w-15 text-center placeholder-red-600 text-red-600 border-black border rounded ${
                             isModified ? "bg-yellow-100" : ""
@@ -288,6 +299,7 @@ const PersonCard = ({
                           }}
                           onKeyPress={(e) => handleKeyPress(e, inputKey)}
                           disabled={!hasEditPermission}
+                          readOnly={!hasEditPermission}
                         />
                       )}
                     </td>
