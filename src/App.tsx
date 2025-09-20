@@ -1,4 +1,3 @@
-// App.tsx
 import { useEffect, useState, useRef } from "react";
 import PersonCard from "./components/PersonCard/PersonCard";
 import SearchBar from "./components/SearchBar";
@@ -8,7 +7,7 @@ import { CompetitionService } from "./services/competitionService";
 import type { PersonCardProps } from "./types";
 import { useAuth } from "./context/AuthContext";
 import { useExtensions } from "./hooks/useExtensions";
-import { ToastContainer, toast, Bounce } from "react-toastify";
+import { ToastContainer, Slide } from "react-toastify";
 
 function App() {
   const [personResults, setPersonResults] = useState<PersonCardProps[]>([]);
@@ -19,10 +18,8 @@ function App() {
   const [focusedPersonId, setFocusedPersonId] = useState<number | null>(null);
   const SELECTED_COMPETITION = import.meta.env.VITE_SELECTED_COMPETITION;
 
-  // Ref a SearchBar input elemére
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Csak egyszer lekérjük az extensions-öket
   const {
     extensions,
     loading: extensionsLoading,
@@ -53,7 +50,6 @@ function App() {
     }
   }, [user, loadCompetitionRoles, userRoles]);
 
-  // Oldal betöltésekor fókusz a SearchBar-ra
   useEffect(() => {
     if (!loading && searchInputRef.current) {
       searchInputRef.current.focus();
@@ -92,7 +88,6 @@ function App() {
     setFocusedPersonId(null);
   };
 
-  // Save gomb után visszaállítjuk a fókuszt a SearchBar-ra
   const handleSaveComplete = () => {
     if (searchInputRef.current) {
       setTimeout(() => {
@@ -115,7 +110,7 @@ function App() {
         draggable={false}
         pauseOnHover={false}
         theme="light"
-        transition={Bounce}
+        transition={Slide}
       />
       <div className="mb-3">
         <LoginBar competitionName={competitionName} />
@@ -128,7 +123,7 @@ function App() {
           query={query}
           onChange={setQuery}
           onSearch={handleSearch}
-          ref={searchInputRef} // Átadjuk a ref-et
+          ref={searchInputRef}
         />
       </div>
 
@@ -141,7 +136,7 @@ function App() {
             extensionsLoading={extensionsLoading}
             shouldFocus={focusedPersonId === p.id}
             onFocusComplete={handleFocusComplete}
-            onSaveComplete={handleSaveComplete} // Átadjuk a callback-et
+            onSaveComplete={handleSaveComplete}
           />
         ))}
       </div>

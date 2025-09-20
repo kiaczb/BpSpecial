@@ -21,7 +21,7 @@ import { generateInputKey } from "../../utils/personCardUtils";
 import PersonCardHeader from "./PersonCardHeader";
 import PersonCardTable from "./PersonCardTable";
 import PersonCardTimeSummary from "./PersonCardTimeSummary";
-import { toast, Bounce } from "react-toastify";
+import { toast, Slide } from "react-toastify";
 
 const PersonCard = ({
   id,
@@ -45,13 +45,11 @@ const PersonCard = ({
 
   const saveButtonRef = useRef<HTMLButtonElement>(null);
 
-  // input change-nél mindig jelezzük, hogy van új változtatás
   const onInputChange = (key: string, value: string) => {
     const formatted = formatTimeInput(value);
 
-    // Ha a formázott érték 0 vagy 0.00 → DNF / üres
     if (formatted === "0" || formatted === "0.00" || formatted === "") {
-      handleInputChange(key, ""); // üres string → visszaáll a DNF/placeholder
+      handleInputChange(key, "");
     } else {
       handleInputChange(key, formatted);
     }
@@ -61,10 +59,8 @@ const PersonCard = ({
 
   const { getWcif, updateWcifExtensions } = useWcifService();
 
-  // Fókusz az első inputra, ha kell
   useEffect(() => {
     if (shouldFocus && hasEditPermission) {
-      // Megkeressük az első DNF attempt-et
       const firstDnfAttempt = results.flatMap((res) =>
         res.times
           .map((time, timeIndex) => ({ res, time, timeIndex }))
@@ -98,18 +94,15 @@ const PersonCard = ({
     }
   }, [shouldFocus, hasEditPermission, results, id, onFocusComplete, inputRefs]);
 
-  // Extension-ből származó idők kinyerése és centisecond konverziója
   const extensionTimes = useMemo(() => {
     const times: { [key: string]: number } = {};
 
-    // Megkeressük a személy extension-ét
     const personExtension = extensions.find(
       (ext) => ext.id === `hungarian.times.person.${id}`
     );
 
     if (!personExtension) return times;
 
-    // Minden módosított attempt-ot feldolgozunk
     personExtension.data.modifiedAttempts.forEach((attempt: any) => {
       const key = generateInputKey(id, attempt.eventId, attempt.attemptIndex);
       times[key] = parseInt(attempt.newValue, 10);
@@ -118,12 +111,10 @@ const PersonCard = ({
     return times;
   }, [extensions, id]);
 
-  // Dinamikus időszámítás - most már az extension időket is figyelembe veszi
   const { remainingTime, usedTime } = useMemo(() => {
     let totalUsedTime = initialUsedTime;
     let totalRemainingTime = initialRemainingTime;
 
-    // 1. Extension-ből származó idők hozzáadása
     Object.values(extensionTimes).forEach((centiseconds) => {
       if (centiseconds > 0) {
         totalRemainingTime -= centiseconds;
@@ -131,7 +122,6 @@ const PersonCard = ({
       }
     });
 
-    // 2. Módosított értékek hozzáadása (ha vannak)
     Object.values(modifiedValues).forEach((formattedTime) => {
       const centiseconds = formattedTimeToCentiseconds(formattedTime);
       if (centiseconds > 0) {
@@ -146,16 +136,13 @@ const PersonCard = ({
     };
   }, [initialRemainingTime, initialUsedTime, extensionTimes, modifiedValues]);
 
-  // Input mező értékének meghatározása
   const getInputValue = (eventId: string, attemptIndex: number): string => {
     const modifiedKey = generateInputKey(id, eventId, attemptIndex);
 
-    // 1. Ha van módosított érték
     if (modifiedValues[modifiedKey] !== undefined) {
       return modifiedValues[modifiedKey];
     }
 
-    // 2. Ha van extension érték és az nem DNF/DNS
     if (extensionTimes[modifiedKey] !== undefined) {
       const centiseconds = extensionTimes[modifiedKey];
       const converted = convertResult(centiseconds, eventId);
@@ -164,11 +151,9 @@ const PersonCard = ({
       }
     }
 
-    // 3. Alapértelmezett: üres string
     return "";
   };
 
-  // DNF-ek helyettesítése extensions-ből
   const getDisplayTime = (
     eventId: string,
     attemptIndex: number,
@@ -179,7 +164,6 @@ const PersonCard = ({
     return originalTime;
   };
 
-  // Input kezelés módosítása - Enterrel Save gombra ugrás
   const handleInputKeyPress = (e: React.KeyboardEvent, key: string): void => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -188,7 +172,6 @@ const PersonCard = ({
       const currentIndex = keys.indexOf(key);
 
       if (currentIndex < keys.length - 1) {
-        // Következő input
         const nextKey = keys[currentIndex + 1];
         const nextInput = inputRefs[nextKey];
         if (nextInput) {
@@ -196,13 +179,11 @@ const PersonCard = ({
           nextInput.select();
         }
       } else {
-        // Utolsó inputnál Save gombra ugrás
         saveButtonRef.current?.focus();
       }
     }
   };
 
-  // Save gomb Enter kezelése
   const handleSaveKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !isUpdating && hasUncommittedChanges) {
       e.preventDefault();
@@ -222,21 +203,17 @@ const PersonCard = ({
     setIsUpdating(true);
 
     try {
-      // 1. WCIF lekérése
       const wcif = await getWcif(competitionId);
       const existingExtensions = wcif.extensions || [];
 
-      // 2. Megkeressük a személy meglévő extension-jét
       const existingPersonExtension = existingExtensions.find(
         (ext: any) => ext.id === `hungarian.times.person.${id}`
       );
 
-      // 3. Meglévő módosítások betöltése (ha vannak)
       const existingModifiedAttempts = existingPersonExtension
         ? existingPersonExtension.data.modifiedAttempts
         : [];
 
-      // 4. Új módosítások hozzáadása/módosítása
       const updatedModifiedAttempts = [...existingModifiedAttempts];
 
       for (const [key, formattedValue] of Object.entries(modifiedValues)) {
@@ -247,21 +224,18 @@ const PersonCard = ({
         const attemptIndex = parseInt(match[3]);
         const centiseconds = formattedTimeToCentiseconds(formattedValue);
 
-        // Megkeressük, hogy ez az attempt már létezik-e
         const existingIndex = updatedModifiedAttempts.findIndex(
           (attempt: any) =>
             attempt.eventId === eventId && attempt.attemptIndex === attemptIndex
         );
 
         if (existingIndex !== -1) {
-          // Módosítjuk a meglévőt
           updatedModifiedAttempts[existingIndex] = {
             ...updatedModifiedAttempts[existingIndex],
             newValue: centiseconds.toString(),
             modifiedAt: new Date().toISOString(),
           };
         } else {
-          // Új attempt hozzáadása
           updatedModifiedAttempts.push({
             eventId,
             roundId: `${eventId}-r1`,
@@ -272,7 +246,6 @@ const PersonCard = ({
         }
       }
 
-      // 5. Új extension létrehozása
       const personExtension = {
         id: `hungarian.times.person.${id}`,
         specUrl: "https://example.com/hungarian-person-times-extension",
@@ -285,7 +258,6 @@ const PersonCard = ({
         },
       };
 
-      // 6. Régi extension eltávolítása és új hozzáadása
       const filteredExtensions = existingExtensions.filter(
         (ext: any) => ext.id !== `hungarian.times.person.${id}`
       );
@@ -294,25 +266,24 @@ const PersonCard = ({
       await updateWcifExtensions(competitionId, updatedExtensions);
 
       console.log("Saved person data succesfully");
-      //alert("Modifications saved");
 
       toast.success("Saved succesfully!", {
         position: "top-center",
-        autoClose: 2000,
+        autoClose: 1200,
         hideProgressBar: true,
         closeOnClick: false,
         pauseOnHover: false,
         draggable: false,
         progress: undefined,
         theme: "light",
-        transition: Bounce,
+        transition: Slide,
       });
       setHasUncommittedChanges(false);
 
       onSaveComplete?.();
     } catch (error) {
       console.error("Error during save:", error);
-      //alert(`Error: ${error}`);
+
       toast.error(
         `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
         {
@@ -324,7 +295,7 @@ const PersonCard = ({
           draggable: true,
           progress: undefined,
           theme: "light",
-          transition: Bounce,
+          transition: Slide,
         }
       );
     } finally {

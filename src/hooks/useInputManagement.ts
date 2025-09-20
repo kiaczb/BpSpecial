@@ -1,4 +1,3 @@
-// src/hooks/useInputManagement.ts
 import { useState, useRef, useCallback } from "react";
 import type { InputManagementReturn } from "../types";
 

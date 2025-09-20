@@ -1,4 +1,3 @@
-// src/components/PersonCard/PersonCardInput.tsx
 import { formatTimeInput } from "../../utils/personCardUtils";
 import type { PersonCardInputProps } from "../../types";
 
@@ -14,7 +13,7 @@ const PersonCardInput = ({
 }: PersonCardInputProps) => {
   return (
     <input
-      ref={(el) => setInputRef(inputKey, el)} // Itt a inputKey az első paraméter
+      ref={(el) => setInputRef(inputKey, el)}
       type="text"
       value={value}
       placeholder={placeholder}

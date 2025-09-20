@@ -1,4 +1,3 @@
-// src/services/competitionService.ts
 import type {
   WCIF,
   PersonCardProps,
@@ -34,7 +33,6 @@ export class CompetitionService {
 
     if (!response.ok) {
       if (response.status === 401 && isAuth) {
-        // Token expired or invalid, clear it and retry with public endpoint
         localStorage.removeItem("WCAApp.accessToken");
         localStorage.removeItem("WCAApp.tokenExpiry");
         localStorage.removeItem("WCAApp.user");

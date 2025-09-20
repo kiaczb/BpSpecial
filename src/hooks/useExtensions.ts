@@ -1,4 +1,3 @@
-// hooks/useExtensions.ts
 import { useState, useEffect } from "react";
 import { isAuthenticated } from "../utils/authUtils";
 

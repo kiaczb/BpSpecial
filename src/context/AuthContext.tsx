@@ -1,4 +1,3 @@
-// src/context/AuthContext.tsx
 import React, {
   createContext,
   useContext,
@@ -28,13 +27,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   });
   const [userRoles, setUserRoles] = useState<CompetitionRole[]>([]);
 
-  // Token expiry kezelése
   const isTokenValid = () => {
     const expiry = localStorage.getItem(localStorageKey("tokenExpiry"));
     return !!accessToken && !!expiry && Date.now() < parseInt(expiry, 10);
   };
 
-  // Ha redirectből jött token a hash-ben, mentsük el
   useEffect(() => {
     const hash = window.location.hash.replace(/^#/, "");
     if (!hash) return;
@@ -53,12 +50,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         expiryTime.toString()
       );
 
-      // Töröljük a hash-t
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
 
-  // Amikor token van, töltsük be a /me endpointot
   useEffect(() => {
     if (!accessToken || !isTokenValid()) return;
 
@@ -70,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         });
         if (!res.ok) {
           console.warn("Failed to fetch /me:", res.status);
-          // Ha invalid a token, töröljük
+
           if (res.status === 401) {
             signOut();
           }
@@ -117,7 +112,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         accessToken ?? localStorage.getItem(localStorageKey("accessToken"));
       if (!token) throw new Error("Not authenticated");
 
-      // Ellenőrizzük, hogy érvényes-e a token
       const expiry = localStorage.getItem(localStorageKey("tokenExpiry"));
       if (!expiry || Date.now() >= parseInt(expiry, 10)) {
         signOut();
@@ -127,14 +121,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const headers = new Headers(options.headers ?? {});
       headers.set("Authorization", `Bearer ${token}`);
 
-      // Ha van body, állítsuk be a Content-Type-ot
       if (options.body && !headers.has("Content-Type")) {
         headers.set("Content-Type", "application/json");
       }
 
       const res = await fetch(url, { ...options, headers });
 
-      // Ha unauthorized, kijelentkeztetjük a felhasználót
       if (res.status === 401) {
         signOut();
         throw new Error("Authentication failed");
@@ -145,7 +137,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     [accessToken, signOut]
   );
 
-  // Funkció a felhasználó szerepeinek betöltéséhez egy versenyben
   const loadCompetitionRoles = useCallback(
     async (competitionId: string) => {
       if (!accessToken || !user) return;
@@ -161,7 +152,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
         const wcif = await response.json();
 
-        // Megkeressük a felhasználót a persons tömbben
         const currentUser = wcif.persons.find(
           (person: any) =>
             person.wcaUserId === user.id || person.name === user.name

@@ -1,4 +1,3 @@
-// components/SearchBar.tsx
 import { forwardRef } from "react";
 import type { SearchBarProps } from "../types";
 
@@ -15,7 +14,7 @@ const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
           <div className="relative">
             <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none"></div>
             <input
-              ref={ref} // Itt használjuk a ref-et
+              ref={ref}
               type="search"
               id="default-search"
               value={query}

@@ -1,4 +1,3 @@
-// src/components/PersonCard/PersonCardHeader.tsx
 import type { CSSProperties } from "react";
 import { BeatLoader } from "react-spinners";
 import type { PersonCardHeaderProps } from "../../types";
@@ -26,7 +25,7 @@ const PersonCardHeader = ({
 
       {hasEditPermission && (
         <button
-          ref={saveButtonRef} // Itt a ref-et közvetlenül használjuk
+          ref={saveButtonRef}
           onClick={saveAllChanges}
           onKeyPress={handleSaveKeyPress}
           disabled={isUpdating || !hasUncommittedChanges}

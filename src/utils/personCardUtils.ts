@@ -12,25 +12,21 @@ export const generateInputKey = (
   return `pid-${personId}-evt-${eventId}-att-${attemptIndex}`;
 };
 
-// utils/timeFormatter.ts
 export function formatTimeInput(value: string): string {
-  const digits = value.replace(/\D/g, ""); // csak számok
+  const digits = value.replace(/\D/g, "");
 
   if (!digits) return "";
 
   if (digits.length <= 2) {
-    // csak századok
     return `0.${digits.padStart(2, "0")}`;
   }
 
   if (digits.length <= 4) {
-    // ss.cc
     const seconds = digits.slice(0, -2);
     const centis = digits.slice(-2);
     return `${parseInt(seconds, 10)}.${centis}`;
   }
 
-  // perc : másodperc . centi
   const minutes = digits.slice(0, -4);
   const seconds = digits.slice(-4, -2);
   const centis = digits.slice(-2);
@@ -69,21 +65,17 @@ export const formattedTimeToCentiseconds = (formattedTime: string): number => {
     return -1;
   }
 
-  // Tizedesvessző vagy pont kezelése
   const normalized = formattedTime.replace(",", ".");
 
-  // Időrészek szétválasztása
   const parts = normalized.split(":");
 
   let totalCentiseconds = 0;
 
   if (parts.length === 1) {
-    // Másodperc.centi formátum (pl. "12.34")
     const [seconds, centis] = parts[0].split(".");
     totalCentiseconds =
       parseInt(seconds || "0", 10) * 100 + parseInt(centis || "0", 10);
   } else if (parts.length === 2) {
-    // Perc:másodperc.centi formátum (pl. "1:23.45")
     const minutes = parseInt(parts[0], 10);
     const [seconds, centis] = parts[1].split(".");
     totalCentiseconds =
