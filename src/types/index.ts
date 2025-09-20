@@ -108,3 +108,25 @@ export interface SearchBarProps {
   onChange: (value: string) => void;
   onSearch: (query: string) => void;
 }
+
+export interface PersonCardHeaderProps {
+  id: number;
+  name: string;
+  hasEditPermission: boolean;
+  isUpdating: boolean;
+  hasUncommittedChanges: boolean;
+  saveAllChanges: () => void;
+  handleSaveKeyPress: (e: React.KeyboardEvent) => void;
+  saveButtonRef: React.RefObject<HTMLButtonElement | null>;
+}
+
+export interface PersonCardInputProps {
+  inputKey: string;
+  value: string;
+  placeholder: string;
+  isModified: boolean;
+  hasEditPermission: boolean;
+  onInputChange: (key: string, value: string) => void;
+  onKeyPress: (e: React.KeyboardEvent, key: string) => void;
+  setInputRef: (key: string, el: HTMLInputElement | null) => void;
+}

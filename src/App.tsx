@@ -1,6 +1,6 @@
 // App.tsx
 import { useEffect, useState, useRef } from "react";
-import PersonCard from "./components/PersonCard";
+import PersonCard from "./components/PersonCard/PersonCard";
 import SearchBar from "./components/SearchBar";
 import LoginBar from "./components/LoginBar";
 import ExtensionManager from "./components/ExtensionManager";
