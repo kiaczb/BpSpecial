@@ -12,7 +12,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const WCA_ORIGIN = import.meta.env.VITE_WCA_ORIGIN;
 const WCA_API_ORIGIN = import.meta.env.VITE_WCA_API_ORIGIN;
 const CLIENT_ID = import.meta.env.VITE_WCA_CLIENT_KEY;
-const REDIRECT_URI = "https://kiaczb.github.io/BpSpecial/";
+const REDIRECT_URI = import.meta.env.VITE_STATIC_REDIRECT_URI;
 const localStorageKey = (key: string) => `WCAApp.${key}`;
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
